@@ -467,6 +467,14 @@ input[type="number"].no-spin {
   user-select: none;
 }
 
+.crop-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  user-select: none;
+  touch-action: none;
+}
+
 .crop-image {
   display: block;
   max-width: 100%;

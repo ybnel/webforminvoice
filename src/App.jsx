@@ -25,9 +25,7 @@ function App() {
   const [scannerInstance, setScannerInstance] = useState(null);
   const [scanStep, setScanStep] = useState('scanning'); // 'scanning' | 'cropping' | 'preview'
   const [rawCapturedPhoto, setRawCapturedPhoto] = useState(null); // Full uncropped image data URL
-  const [displayCorners, setDisplayCorners] = useState(null); // Scaled display coordinates
-  const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 });
-  const [originalSize, setOriginalSize] = useState({ width: 0, height: 0 });
+  const [displayCorners, setDisplayCorners] = useState(null); // Normalized coordinates (0 to 1)
   const [activeHandle, setActiveHandle] = useState(null);
   const [capturedImage, setCapturedImage] = useState(null); // Cropped image (Data URL)
   const [filteredImage, setFilteredImage] = useState(null); // Filtered cropped image (Data URL)
@@ -194,13 +192,8 @@ function App() {
   // Called when rawCapturedPhoto loads inside the crop container
   const handleImageLoad = (e) => {
     const img = e.target;
-    const displayWidth = img.clientWidth;
-    const displayHeight = img.clientHeight;
     const naturalWidth = img.naturalWidth;
     const naturalHeight = img.naturalHeight;
-
-    setDisplaySize({ width: displayWidth, height: displayHeight });
-    setOriginalSize({ width: naturalWidth, height: naturalHeight });
 
     if (window.cv && window.cv.Mat && scannerInstance) {
       try {
@@ -210,14 +203,12 @@ function App() {
         mat.delete();
 
         if (corners && corners.topLeftCorner && corners.topRightCorner && corners.bottomLeftCorner && corners.bottomRightCorner) {
-          const scaleX = displayWidth / naturalWidth;
-          const scaleY = displayHeight / naturalHeight;
-
+          // Normalize coordinates (0 to 1) relative to natural image dimensions
           setDisplayCorners({
-            topLeftCorner: { x: corners.topLeftCorner.x * scaleX, y: corners.topLeftCorner.y * scaleY },
-            topRightCorner: { x: corners.topRightCorner.x * scaleX, y: corners.topRightCorner.y * scaleY },
-            bottomLeftCorner: { x: corners.bottomLeftCorner.x * scaleX, y: corners.bottomLeftCorner.y * scaleY },
-            bottomRightCorner: { x: corners.bottomRightCorner.x * scaleX, y: corners.bottomRightCorner.y * scaleY }
+            topLeftCorner: { x: corners.topLeftCorner.x / naturalWidth, y: corners.topLeftCorner.y / naturalHeight },
+            topRightCorner: { x: corners.topRightCorner.x / naturalWidth, y: corners.topRightCorner.y / naturalHeight },
+            bottomLeftCorner: { x: corners.bottomLeftCorner.x / naturalWidth, y: corners.bottomLeftCorner.y / naturalHeight },
+            bottomRightCorner: { x: corners.bottomRightCorner.x / naturalWidth, y: corners.bottomRightCorner.y / naturalHeight }
           });
           return;
         }
@@ -226,14 +217,12 @@ function App() {
       }
     }
 
-    // Fallback: Default bounding box corners (10% padding from edges)
-    const paddingX = displayWidth * 0.1;
-    const paddingY = displayHeight * 0.1;
+    // Fallback: Default bounding box corners (10% padding from edges, normalized)
     setDisplayCorners({
-      topLeftCorner: { x: paddingX, y: paddingY },
-      topRightCorner: { x: displayWidth - paddingX, y: paddingY },
-      bottomLeftCorner: { x: paddingX, y: displayHeight - paddingY },
-      bottomRightCorner: { x: displayWidth - paddingX, y: displayHeight - paddingY }
+      topLeftCorner: { x: 0.1, y: 0.1 },
+      topRightCorner: { x: 0.9, y: 0.1 },
+      bottomLeftCorner: { x: 0.1, y: 0.9 },
+      bottomRightCorner: { x: 0.9, y: 0.9 }
     });
   };
 
@@ -249,20 +238,24 @@ function App() {
     if (activeHandle !== handleName || !displayCorners) return;
     e.preventDefault();
     
-    const container = e.currentTarget.parentElement;
+    const container = e.currentTarget.parentElement; // .crop-wrapper
     if (!container) return;
     const rect = container.getBoundingClientRect();
     
     let x = e.clientX - rect.left;
     let y = e.clientY - rect.top;
     
-    // Constrain the coordinate within display bounds
-    x = Math.max(0, Math.min(x, displaySize.width));
-    y = Math.max(0, Math.min(y, displaySize.height));
+    // Constrain the coordinate within container bounds (matching image dimensions)
+    x = Math.max(0, Math.min(x, rect.width));
+    y = Math.max(0, Math.min(y, rect.height));
+    
+    // Normalize coordinates to 0..1 range
+    const normalizedX = rect.width > 0 ? x / rect.width : 0;
+    const normalizedY = rect.height > 0 ? y / rect.height : 0;
     
     setDisplayCorners(prev => ({
       ...prev,
-      [handleName]: { x, y }
+      [handleName]: { x: normalizedX, y: normalizedY }
     }));
   };
 
@@ -284,25 +277,26 @@ function App() {
     img.src = rawCapturedPhoto;
     img.onload = () => {
       try {
-        const scaleX = originalSize.width / displaySize.width;
-        const scaleY = originalSize.height / displaySize.height;
+        const naturalWidth = img.naturalWidth;
+        const naturalHeight = img.naturalHeight;
 
+        // Map normalized coordinates back to natural image resolution
         const originalCorners = {
           topLeftCorner: { 
-            x: displayCorners.topLeftCorner.x * scaleX, 
-            y: displayCorners.topLeftCorner.y * scaleY 
+            x: displayCorners.topLeftCorner.x * naturalWidth, 
+            y: displayCorners.topLeftCorner.y * naturalHeight 
           },
           topRightCorner: { 
-            x: displayCorners.topRightCorner.x * scaleX, 
-            y: displayCorners.topRightCorner.y * scaleY 
+            x: displayCorners.topRightCorner.x * naturalWidth, 
+            y: displayCorners.topRightCorner.y * naturalHeight 
           },
           bottomLeftCorner: { 
-            x: displayCorners.bottomLeftCorner.x * scaleX, 
-            y: displayCorners.bottomLeftCorner.y * scaleY 
+            x: displayCorners.bottomLeftCorner.x * naturalWidth, 
+            y: displayCorners.bottomLeftCorner.y * naturalHeight 
           },
           bottomRightCorner: { 
-            x: displayCorners.bottomRightCorner.x * scaleX, 
-            y: displayCorners.bottomRightCorner.y * scaleY 
+            x: displayCorners.bottomRightCorner.x * naturalWidth, 
+            y: displayCorners.bottomRightCorner.y * naturalHeight 
           }
         };
 
@@ -627,37 +621,52 @@ function App() {
                     Geser 4 titik sudut untuk menyesuaikan posisi kertas
                   </div>
                   <div className="crop-container" id="crop-container-element">
-                    <img 
-                      src={rawCapturedPhoto} 
-                      onLoad={handleImageLoad} 
-                      className="crop-image" 
-                      alt="Raw captured paper" 
-                    />
-                    {displayCorners && (
-                      <>
-                        <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-                          <polygon 
-                            points={`${displayCorners.topLeftCorner.x},${displayCorners.topLeftCorner.y} ${displayCorners.topRightCorner.x},${displayCorners.topRightCorner.y} ${displayCorners.bottomRightCorner.x},${displayCorners.bottomRightCorner.y} ${displayCorners.bottomLeftCorner.x},${displayCorners.bottomLeftCorner.y}`}
-                            fill="rgba(79, 70, 229, 0.2)"
-                            stroke="var(--primary)"
-                            strokeWidth="3"
-                          />
-                        </svg>
-                        {Object.keys(displayCorners).map((key) => {
-                          const corner = displayCorners[key];
-                          return (
-                            <div 
-                              key={key}
-                              className={`crop-handle ${activeHandle === key ? 'active' : ''}`}
-                              style={{ left: `${corner.x}px`, top: `${corner.y}px` }}
-                              onPointerDown={(e) => handlePointerDown(e, key)}
-                              onPointerMove={(e) => handlePointerMove(e, key)}
-                              onPointerUp={(e) => handlePointerUp(e, key)}
+                    <div className="crop-wrapper">
+                      <img 
+                        src={rawCapturedPhoto} 
+                        onLoad={handleImageLoad} 
+                        className="crop-image" 
+                        alt="Raw captured paper" 
+                      />
+                      {displayCorners && (
+                        <>
+                          <svg 
+                            viewBox="0 0 100 100" 
+                            preserveAspectRatio="none" 
+                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                          >
+                            <polygon 
+                              points={
+                                `${displayCorners.topLeftCorner.x * 100},${displayCorners.topLeftCorner.y * 100} ` +
+                                `${displayCorners.topRightCorner.x * 100},${displayCorners.topRightCorner.y * 100} ` +
+                                `${displayCorners.bottomRightCorner.x * 100},${displayCorners.bottomRightCorner.y * 100} ` +
+                                `${displayCorners.bottomLeftCorner.x * 100},${displayCorners.bottomLeftCorner.y * 100}`
+                              }
+                              fill="rgba(79, 70, 229, 0.2)"
+                              stroke="var(--primary)"
+                              strokeWidth="2"
+                              vectorEffect="non-scaling-stroke"
                             />
-                          );
-                        })}
-                      </>
-                    )}
+                          </svg>
+                          {Object.keys(displayCorners).map((key) => {
+                            const corner = displayCorners[key];
+                            return (
+                              <div 
+                                key={key}
+                                className={`crop-handle ${activeHandle === key ? 'active' : ''}`}
+                                style={{ 
+                                  left: `${corner.x * 100}%`, 
+                                  top: `${corner.y * 100}%` 
+                                }}
+                                onPointerDown={(e) => handlePointerDown(e, key)}
+                                onPointerMove={(e) => handlePointerMove(e, key)}
+                                onPointerUp={(e) => handlePointerUp(e, key)}
+                              />
+                            );
+                          })}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
