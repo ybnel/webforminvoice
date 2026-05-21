@@ -412,355 +412,355 @@ function App() {
   };
 
   return (
-    <div className="form-container">
-      <div className="header">
-        <h1>Invoice Submission</h1>
-        <p>Please enter your invoice details below</p>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        {/* Client Info Section */}
-        <div className="section">
-          <h2 className="section-title"><User size={20} /> Data Diri</h2>
-          <div className="input-group">
-            <label htmlFor="fullName">Nama Lengkap</label>
-            <input id="fullName" name="fullName" type="text" placeholder="John Doe" required />
-          </div>
-          <div className="grid-2">
-            <div className="input-group">
-              <label htmlFor="email">Email</label>
-              <input id="email" name="email" type="email" placeholder="john@email.com" />
-            </div>
-            <div className="input-group">
-              <label htmlFor="phone">Nomor Telepon</label>
-              <input id="phone" name="phone" type="tel" placeholder="081234567890" />
-            </div>
-          </div>
+    <>
+      <div className="form-container" style={{ display: isScannerOpen ? 'none' : 'block' }}>
+        <div className="header">
+          <h1>Invoice Submission</h1>
+          <p>Please enter your invoice details below</p>
         </div>
 
-        {/* Invoice Info Section */}
-        <div className="section">
-          <h2 className="section-title"><FileText size={20} /> Invoice Details</h2>
-          <div className="grid-2">
+        <form onSubmit={handleSubmit}>
+          {/* Client Info Section */}
+          <div className="section">
+            <h2 className="section-title"><User size={20} /> Data Diri</h2>
             <div className="input-group">
-              <label htmlFor="invoiceNumber">Invoice Number</label>
-              <input id="invoiceNumber" name="invoiceNumber" type="text" placeholder="INV-2026-001" required />
+              <label htmlFor="fullName">Nama Lengkap</label>
+              <input id="fullName" name="fullName" type="text" placeholder="John Doe" required />
             </div>
-            <div className="input-group">
-              <label htmlFor="invoiceDate">Invoice Date</label>
-              <input id="invoiceDate" name="invoiceDate" type="date" required />
+            <div className="grid-2">
+              <div className="input-group">
+                <label htmlFor="email">Email</label>
+                <input id="email" name="email" type="email" placeholder="john@email.com" />
+              </div>
+              <div className="input-group">
+                <label htmlFor="phone">Nomor Telepon</label>
+                <input id="phone" name="phone" type="tel" placeholder="081234567890" />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Items Section */}
-        <div className="section">
-          <h2 className="section-title"><Receipt size={20} /> Items</h2>
-          {items.map((item) => (
-            <div key={item.id} className="item-row">
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <input 
-                  type="text" 
-                  placeholder="Item description" 
-                  value={item.name}
-                  onChange={(e) => handleItemChange(item.id, 'name', e.target.value)}
-                  required
-                />
+          {/* Invoice Info Section */}
+          <div className="section">
+            <h2 className="section-title"><FileText size={20} /> Invoice Details</h2>
+            <div className="grid-2">
+              <div className="input-group">
+                <label htmlFor="invoiceNumber">Invoice Number</label>
+                <input id="invoiceNumber" name="invoiceNumber" type="text" placeholder="INV-2026-001" required />
               </div>
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <input 
-                  type="number" 
-                  placeholder="Qty" 
-                  min="1"
-                  step="any"
-                  value={item.qty}
-                  onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)}
-                  required
-                />
+              <div className="input-group">
+                <label htmlFor="invoiceDate">Invoice Date</label>
+                <input id="invoiceDate" name="invoiceDate" type="date" required />
               </div>
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <input 
-                  type="number" 
-                  className="no-spin"
-                  placeholder="Price" 
-                  min="0"
-                  value={item.price}
-                  onChange={(e) => handleItemChange(item.id, 'price', e.target.value)}
-                  required
-                />
-              </div>
-              <button 
-                type="button" 
-                className="btn-icon" 
-                onClick={() => handleRemoveItem(item.id)}
-                disabled={items.length === 1}
-                style={{ 
-                  opacity: items.length === 1 ? 0.4 : 1, 
-                  cursor: items.length === 1 ? 'not-allowed' : 'pointer' 
-                }}
-                title="Remove Item"
-              >
-                <Trash2 size={20} />
-              </button>
-            </div>
-          ))}
-          
-          <button type="button" className="btn btn-secondary" onClick={handleAddItem}>
-            <Plus size={18} /> Add Item
-          </button>
-
-          <div className="totals">
-            <div className="total-row grand">
-              <span>Total Invoice:</span>
-              <span>Rp {total.toLocaleString('id-ID')}</span>
             </div>
           </div>
-        </div>
 
-        {/* Attachment Section */}
-        <div className="section">
-          <h2 className="section-title"><UploadCloud size={20} /> Attachment</h2>
-          <div className="input-group">
-            <label>Upload Invoice File</label>
-            
-            {!fileName ? (
-              <div className="upload-options" style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+          {/* Items Section */}
+          <div className="section">
+            <h2 className="section-title"><Receipt size={20} /> Items</h2>
+            {items.map((item) => (
+              <div key={item.id} className="item-row">
+                <div className="input-group" style={{ marginBottom: 0 }}>
+                  <input 
+                    type="text" 
+                    placeholder="Item description" 
+                    value={item.name}
+                    onChange={(e) => handleItemChange(item.id, 'name', e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="input-group" style={{ marginBottom: 0 }}>
+                  <input 
+                    type="number" 
+                    placeholder="Qty" 
+                    min="1"
+                    step="any"
+                    value={item.qty}
+                    onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="input-group" style={{ marginBottom: 0 }}>
+                  <input 
+                    type="number" 
+                    className="no-spin"
+                    placeholder="Price" 
+                    min="0"
+                    value={item.price}
+                    onChange={(e) => handleItemChange(item.id, 'price', e.target.value)}
+                    required
+                  />
+                </div>
                 <button 
                   type="button" 
-                  className="btn btn-secondary" 
-                  style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500' }}
-                  onClick={handleOpenScanner}
+                  className="btn-icon" 
+                  onClick={() => handleRemoveItem(item.id)}
+                  disabled={items.length === 1}
+                  style={{ 
+                    opacity: items.length === 1 ? 0.4 : 1, 
+                    cursor: items.length === 1 ? 'not-allowed' : 'pointer' 
+                  }}
+                  title="Remove Item"
                 >
-                  <Camera size={24} style={{ margin: '0 auto' }} />
-                  <span>Ambil Foto (Scan)</span>
+                  <Trash2 size={20} />
                 </button>
-
-                <label className="btn btn-secondary" style={{ flex: 1, textAlign: 'center', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500' }}>
-                  <Image size={24} style={{ margin: '0 auto' }} />
-                  <span>Pilih Galeri/PDF</span>
-                  <input 
-                    type="file" 
-                    accept=".pdf,image/*" 
-                    style={{ display: 'none' }} 
-                    onChange={handleFileChange} 
-                  />
-                </label>
               </div>
-            ) : (
-              <div className="scanned-preview-container">
-                {scannedFileUrl ? (
-                  <img src={scannedFileUrl} className="scanned-preview-thumb" alt="Preview" />
-                ) : (
-                  <div className="scanned-preview-thumb" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e2e8f0' }}>
-                    <FileText size={28} style={{ color: '#64748b' }} />
-                  </div>
-                )}
-                <div className="scanned-preview-info">
-                  <span className="scanned-preview-name">{fileName}</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    {scannedFile ? `${(scannedFile.size / 1024).toFixed(1)} KB` : ''}
-                  </span>
-                </div>
-                <div className="scanned-preview-actions">
+            ))}
+            
+            <button type="button" className="btn btn-secondary" onClick={handleAddItem}>
+              <Plus size={18} /> Add Item
+            </button>
+
+            <div className="totals">
+              <div className="total-row grand">
+                <span>Total Invoice:</span>
+                <span>Rp {total.toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Attachment Section */}
+          <div className="section">
+            <h2 className="section-title"><UploadCloud size={20} /> Attachment</h2>
+            <div className="input-group">
+              <label>Upload Invoice File</label>
+              
+              {!fileName ? (
+                <div className="upload-options" style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                   <button 
                     type="button" 
-                    className="btn-icon" 
-                    onClick={handleClearAttachment}
-                    title="Hapus Lampiran"
+                    className="btn btn-secondary" 
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500' }}
+                    onClick={handleOpenScanner}
                   >
-                    <Trash2 size={20} />
+                    <Camera size={24} style={{ margin: '0 auto' }} />
+                    <span>Ambil Foto (Scan)</span>
+                  </button>
+
+                  <label className="btn btn-secondary" style={{ flex: 1, textAlign: 'center', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500' }}>
+                    <Image size={24} style={{ margin: '0 auto' }} />
+                    <span>Pilih Galeri/PDF</span>
+                    <input 
+                      type="file" 
+                      accept=".pdf,image/*" 
+                      style={{ display: 'none' }} 
+                      onChange={handleFileChange} 
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="scanned-preview-container">
+                  {scannedFileUrl ? (
+                    <img src={scannedFileUrl} className="scanned-preview-thumb" alt="Preview" />
+                  ) : (
+                    <div className="scanned-preview-thumb" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e2e8f0' }}>
+                      <FileText size={28} style={{ color: '#64748b' }} />
+                    </div>
+                  )}
+                  <div className="scanned-preview-info">
+                    <span className="scanned-preview-name">{fileName}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {scannedFile ? `${(scannedFile.size / 1024).toFixed(1)} KB` : ''}
+                    </span>
+                  </div>
+                  <div className="scanned-preview-actions">
+                    <button 
+                      type="button" 
+                      className="btn-icon" 
+                      onClick={handleClearAttachment}
+                      title="Hapus Lampiran"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="input-group" style={{ marginTop: '1rem' }}>
+              <label htmlFor="notes">Notes</label>
+              <textarea id="notes" name="notes" rows="3" placeholder="Additional notes or payment instructions..."></textarea>
+            </div>
+          </div>
+
+          <button type="submit" className="btn btn-primary">
+            Submit Invoice
+          </button>
+        </form>
+      </div>
+
+      {/* Camera Document Scanner Page */}
+      {isScannerOpen && (
+        <div className="scanner-page">
+          <div className="scanner-page-header">
+            <h3><Camera size={20} /> Camera Document Scanner</h3>
+            <button 
+              type="button" 
+              className="scanner-close-btn" 
+              onClick={() => setIsScannerOpen(false)}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="scanner-page-body">
+            {isCvLoading && (
+              <div className="scanner-loading-overlay">
+                <Loader2 className="scanner-spinner" size={32} />
+                <p style={{ fontSize: '0.9rem', fontWeight: '500' }}>Mengunduh modul OpenCV & Scanner...</p>
+              </div>
+            )}
+
+            {scanStep === 'scanning' && (
+              <div className="scanner-viewport">
+                <video ref={videoRef} style={{ display: 'none' }} playsInline muted />
+                <canvas ref={canvasRef} className="scanner-canvas-overlay" />
+                <div className="scanner-status-toast">
+                  Sejajarkan kertas invoice dengan kotak hijau
+                </div>
+              </div>
+            )}
+
+            {scanStep === 'cropping' && (
+              <div className="scanner-step-container">
+                <div className="scanner-status-toast" style={{ position: 'relative', top: 'auto', marginBottom: '1rem' }}>
+                  Geser 4 titik sudut untuk menyesuaikan posisi kertas
+                </div>
+                <div className="crop-container" id="crop-container-element">
+                  <div className="crop-wrapper">
+                    <img 
+                      src={rawCapturedPhoto} 
+                      onLoad={handleImageLoad} 
+                      className="crop-image" 
+                      alt="Raw captured paper" 
+                    />
+                    {displayCorners && (
+                      <>
+                        <svg 
+                          viewBox="0 0 100 100" 
+                          preserveAspectRatio="none" 
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                        >
+                          <polygon 
+                            points={
+                              `${displayCorners.topLeftCorner.x * 100},${displayCorners.topLeftCorner.y * 100} ` +
+                              `${displayCorners.topRightCorner.x * 100},${displayCorners.topRightCorner.y * 100} ` +
+                              `${displayCorners.bottomRightCorner.x * 100},${displayCorners.bottomRightCorner.y * 100} ` +
+                              `${displayCorners.bottomLeftCorner.x * 100},${displayCorners.bottomLeftCorner.y * 100}`
+                            }
+                            fill="rgba(79, 70, 229, 0.2)"
+                            stroke="var(--primary)"
+                            strokeWidth="2"
+                            vectorEffect="non-scaling-stroke"
+                          />
+                        </svg>
+                        {Object.keys(displayCorners).map((key) => {
+                          const corner = displayCorners[key];
+                          return (
+                            <div 
+                              key={key}
+                              className={`crop-handle ${activeHandle === key ? 'active' : ''}`}
+                              style={{ 
+                                left: `${corner.x * 100}%`, 
+                                top: `${corner.y * 100}%` 
+                              }}
+                              onPointerDown={(e) => handlePointerDown(e, key)}
+                              onPointerMove={(e) => handlePointerMove(e, key)}
+                              onPointerUp={(e) => handlePointerUp(e, key)}
+                            />
+                          );
+                        })}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {scanStep === 'preview' && (
+              <div className="scanner-step-container">
+                {filteredImage ? (
+                  <img src={filteredImage} className="scan-preview" alt="Cropped preview" />
+                ) : (
+                  <div style={{ height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Loader2 className="scanner-spinner" size={24} />
+                  </div>
+                )}
+                
+                {/* Filter controls */}
+                <div className="filter-group">
+                  <button 
+                    type="button" 
+                    className={`filter-btn ${filterType === 'color' ? 'active' : ''}`}
+                    onClick={() => setFilterType('color')}
+                  >
+                    <Sparkles size={16} style={{ display: 'inline', marginRight: '0.25rem' }} />
+                    Warna Asli
+                  </button>
+                  <button 
+                    type="button" 
+                    className={`filter-btn ${filterType === 'bw' ? 'active' : ''}`}
+                    onClick={() => setFilterType('bw')}
+                  >
+                    <FileText size={16} style={{ display: 'inline', marginRight: '0.25rem' }} />
+                    Scan (Hitam-Putih)
                   </button>
                 </div>
               </div>
             )}
           </div>
-          <div className="input-group" style={{ marginTop: '1rem' }}>
-            <label htmlFor="notes">Notes</label>
-            <textarea id="notes" name="notes" rows="3" placeholder="Additional notes or payment instructions..."></textarea>
-          </div>
-        </div>
 
-        <button type="submit" className="btn btn-primary">
-          Submit Invoice
-        </button>
-      </form>
-
-      {/* Camera Document Scanner Modal */}
-      {isScannerOpen && (
-        <div className="scanner-modal-backdrop">
-          <div className="scanner-modal-content">
-            <div className="scanner-modal-header">
-              <h3><Camera size={20} /> Camera Document Scanner</h3>
+          <div className="scanner-page-footer">
+            {scanStep === 'scanning' ? (
               <button 
                 type="button" 
-                className="scanner-close-btn" 
-                onClick={() => setIsScannerOpen(false)}
+                className="btn btn-primary" 
+                onClick={handleCapture}
+                disabled={isCvLoading}
               >
-                <X size={20} />
+                <Camera size={18} /> Ambil Foto (Scan)
               </button>
-            </div>
-
-            <div className="scanner-modal-body">
-              {isCvLoading && (
-                <div className="scanner-loading-overlay">
-                  <Loader2 className="scanner-spinner" size={32} />
-                  <p style={{ fontSize: '0.9rem', fontWeight: '500' }}>Mengunduh modul OpenCV & Scanner...</p>
-                </div>
-              )}
-
-              {scanStep === 'scanning' && (
-                <div className="scanner-viewport">
-                  <video ref={videoRef} style={{ display: 'none' }} playsInline muted />
-                  <canvas ref={canvasRef} className="scanner-canvas-overlay" />
-                  <div className="scanner-status-toast">
-                    Sejajarkan kertas invoice dengan kotak hijau
-                  </div>
-                </div>
-              )}
-
-              {scanStep === 'cropping' && (
-                <div className="scanner-step-container">
-                  <div className="scanner-status-toast" style={{ position: 'relative', top: 'auto', marginBottom: '1rem' }}>
-                    Geser 4 titik sudut untuk menyesuaikan posisi kertas
-                  </div>
-                  <div className="crop-container" id="crop-container-element">
-                    <div className="crop-wrapper">
-                      <img 
-                        src={rawCapturedPhoto} 
-                        onLoad={handleImageLoad} 
-                        className="crop-image" 
-                        alt="Raw captured paper" 
-                      />
-                      {displayCorners && (
-                        <>
-                          <svg 
-                            viewBox="0 0 100 100" 
-                            preserveAspectRatio="none" 
-                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-                          >
-                            <polygon 
-                              points={
-                                `${displayCorners.topLeftCorner.x * 100},${displayCorners.topLeftCorner.y * 100} ` +
-                                `${displayCorners.topRightCorner.x * 100},${displayCorners.topRightCorner.y * 100} ` +
-                                `${displayCorners.bottomRightCorner.x * 100},${displayCorners.bottomRightCorner.y * 100} ` +
-                                `${displayCorners.bottomLeftCorner.x * 100},${displayCorners.bottomLeftCorner.y * 100}`
-                              }
-                              fill="rgba(79, 70, 229, 0.2)"
-                              stroke="var(--primary)"
-                              strokeWidth="2"
-                              vectorEffect="non-scaling-stroke"
-                            />
-                          </svg>
-                          {Object.keys(displayCorners).map((key) => {
-                            const corner = displayCorners[key];
-                            return (
-                              <div 
-                                key={key}
-                                className={`crop-handle ${activeHandle === key ? 'active' : ''}`}
-                                style={{ 
-                                  left: `${corner.x * 100}%`, 
-                                  top: `${corner.y * 100}%` 
-                                }}
-                                onPointerDown={(e) => handlePointerDown(e, key)}
-                                onPointerMove={(e) => handlePointerMove(e, key)}
-                                onPointerUp={(e) => handlePointerUp(e, key)}
-                              />
-                            );
-                          })}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {scanStep === 'preview' && (
-                <div className="scanner-step-container">
-                  {filteredImage ? (
-                    <img src={filteredImage} className="scan-preview" alt="Cropped preview" />
-                  ) : (
-                    <div style={{ height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Loader2 className="scanner-spinner" size={24} />
-                    </div>
-                  )}
-                  
-                  {/* Filter controls */}
-                  <div className="filter-group">
-                    <button 
-                      type="button" 
-                      className={`filter-btn ${filterType === 'color' ? 'active' : ''}`}
-                      onClick={() => setFilterType('color')}
-                    >
-                      <Sparkles size={16} style={{ display: 'inline', marginRight: '0.25rem' }} />
-                      Warna Asli
-                    </button>
-                    <button 
-                      type="button" 
-                      className={`filter-btn ${filterType === 'bw' ? 'active' : ''}`}
-                      onClick={() => setFilterType('bw')}
-                    >
-                      <FileText size={16} style={{ display: 'inline', marginRight: '0.25rem' }} />
-                      Scan (Hitam-Putih)
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="scanner-modal-footer">
-              {scanStep === 'scanning' ? (
+            ) : scanStep === 'cropping' ? (
+              <>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => {
+                    setScanStep('scanning');
+                    setRawCapturedPhoto(null);
+                    setDisplayCorners(null);
+                  }}
+                >
+                  <RefreshCw size={16} /> Ulangi Foto
+                </button>
                 <button 
                   type="button" 
                   className="btn btn-primary" 
-                  onClick={handleCapture}
-                  disabled={isCvLoading}
+                  onClick={handleCropApply}
                 >
-                  <Camera size={18} /> Ambil Foto (Scan)
+                  <Check size={16} /> Potong Kertas
                 </button>
-              ) : scanStep === 'cropping' ? (
-                <>
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    onClick={() => {
-                      setScanStep('scanning');
-                      setRawCapturedPhoto(null);
-                      setDisplayCorners(null);
-                    }}
-                  >
-                    <RefreshCw size={16} /> Ulangi Foto
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn btn-primary" 
-                    onClick={handleCropApply}
-                  >
-                    <Check size={16} /> Potong Kertas
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    onClick={() => setScanStep('cropping')}
-                  >
-                    <RefreshCw size={16} /> Ulangi Potong
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn btn-primary" 
-                    onClick={handleSaveScan}
-                  >
-                    <Check size={16} /> Simpan Hasil Scan
-                  </button>
-                </>
-              )}
-            </div>
+              </>
+            ) : (
+              <>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setScanStep('cropping')}
+                >
+                  <RefreshCw size={16} /> Ulangi Potong
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={handleSaveScan}
+                >
+                  <Check size={16} /> Simpan Hasil Scan
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
