@@ -35,6 +35,7 @@ function App() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const activeHandleRef = useRef(null);
 
   // Auto-increment / unique id for list items
   const handleAddItem = () => {
@@ -230,12 +231,13 @@ function App() {
   const handlePointerDown = (e, handleName) => {
     e.preventDefault();
     e.target.setPointerCapture(e.pointerId);
+    activeHandleRef.current = handleName;
     setActiveHandle(handleName);
   };
 
   // Handle pointer drag (move) on a corner marker
   const handlePointerMove = (e, handleName) => {
-    if (activeHandle !== handleName || !displayCorners) return;
+    if (activeHandleRef.current !== handleName || !displayCorners) return;
     e.preventDefault();
     
     const container = e.currentTarget.parentElement; // .crop-wrapper
@@ -261,10 +263,11 @@ function App() {
 
   // Handle pointer release
   const handlePointerUp = (e, handleName) => {
-    if (activeHandle === handleName) {
+    if (activeHandleRef.current === handleName) {
       try {
         e.target.releasePointerCapture(e.pointerId);
       } catch (err) {}
+      activeHandleRef.current = null;
       setActiveHandle(null);
     }
   };
@@ -616,7 +619,7 @@ function App() {
               )}
 
               {scanStep === 'cropping' && (
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div className="scanner-step-container">
                   <div className="scanner-status-toast" style={{ position: 'relative', top: 'auto', marginBottom: '1rem' }}>
                     Geser 4 titik sudut untuk menyesuaikan posisi kertas
                   </div>
@@ -672,9 +675,9 @@ function App() {
               )}
 
               {scanStep === 'preview' && (
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div className="scanner-step-container">
                   {filteredImage ? (
-                    <img src={filteredImage} className="scan-preview" style={{ width: '100%', height: '350px', objectFit: 'contain', borderRadius: '8px', border: '1px solid var(--border)' }} alt="Cropped preview" />
+                    <img src={filteredImage} className="scan-preview" alt="Cropped preview" />
                   ) : (
                     <div style={{ height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Loader2 className="scanner-spinner" size={24} />
