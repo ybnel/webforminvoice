@@ -222,6 +222,290 @@ input[type="number"].no-spin {
   border-top: 2px solid var(--border);
 }
 
+/* Scanner Modal Overlay */
+.scanner-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+  padding: 1.5rem;
+}
+
+.scanner-modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.scanner-modal-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+}
+
+.scanner-modal-header h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.scanner-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.scanner-close-btn:hover {
+  background: #f1f5f9;
+  color: var(--text-main);
+}
+
+.scanner-modal-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  background: #f8fafc;
+  position: relative;
+}
+
+/* Scanner viewport wrapper */
+.scanner-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3/4;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+}
+
+.scanner-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scanner-canvas-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.scanner-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.9);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  z-index: 10;
+}
+
+.scanner-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-left-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.scanner-status-toast {
+  position: absolute;
+  top: 1rem;
+  background: rgba(15, 23, 42, 0.85);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Controls & Buttons inside modal */
+.scanner-modal-footer {
+  padding: 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  background: white;
+}
+
+.scanner-modal-footer .btn {
+  flex: 1;
+  padding: 0.75rem;
+}
+
+/* Scanner filter toggle */
+.filter-group {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+
+.filter-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: white;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+  text-align: center;
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+/* Scanned Preview Card in Form */
+.scanned-preview-container {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-top: 1rem;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.scanned-preview-thumb {
+  width: 60px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: white;
+}
+
+.scanned-preview-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.scanned-preview-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  word-break: break-all;
+}
+
+.scanned-preview-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Draggable Crop Area Styling */
+.crop-container {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #0f172a;
+  border-radius: 12px;
+  overflow: hidden;
+  touch-action: none; /* Prevents scrolling when dragging on mobile */
+  user-select: none;
+}
+
+.crop-image {
+  display: block;
+  max-width: 100%;
+  max-height: 380px;
+  width: auto;
+  height: auto;
+  pointer-events: none; /* Disables browser native image dragging */
+}
+
+.crop-handle {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid white;
+  cursor: move;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  touch-action: none;
+  transition: transform 0.1s ease, background-color 0.2s;
+}
+
+.crop-handle:active {
+  background: var(--primary-hover);
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* Touch targets expanded for easier dragging on mobile */
+.crop-handle::after {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  right: -12px;
+  bottom: -12px;
+}
+
 /* Responsive Design for Mobile */
 @media (max-width: 640px) {
   body {
@@ -250,5 +534,36 @@ input[type="number"].no-spin {
   }
   .total-row {
     width: 100%;
+  }
+  
+  /* Scanner Mobile full screen */
+  .scanner-modal-backdrop {
+    padding: 0;
+  }
+  .scanner-modal-content {
+    height: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .scanner-modal-body {
+    flex: 1;
+    padding: 0;
+    justify-content: center;
+    background: #000;
+  }
+  .scanner-viewport {
+    border-radius: 0;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    flex: 1;
+  }
+  .scanner-modal-footer {
+    padding: 1rem;
+  }
+  .crop-image {
+    max-height: 280px;
   }
 }
