@@ -32,11 +32,11 @@ function App() {
   };
 
   const handleSaveScan = (newAttachment) => {
-    setAttachments(prev => [...prev, newAttachment]);
+    setAttachments(prev => [...prev, { ...newAttachment, category: '' }]);
   };
 
   const handleSaveEdit = (updatedAttachment) => {
-    setAttachments(prev => prev.map(att => att.id === updatedAttachment.id ? updatedAttachment : att));
+    setAttachments(prev => prev.map(att => att.id === updatedAttachment.id ? { ...att, ...updatedAttachment } : att));
   };
 
   const handleRemoveAttachment = (id) => {
@@ -49,6 +49,12 @@ function App() {
     });
   };
 
+  const handleAttachmentCategoryChange = (id, category) => {
+    setAttachments(prev => prev.map(att =>
+      att.id === id ? { ...att, category } : att
+    ));
+  };
+
   return (
     <>
       <div style={{ display: isScannerOpen ? 'none' : 'block' }}>
@@ -58,6 +64,7 @@ function App() {
           onFileChange={handleFileChange}
           onOpenEditor={handleOpenEditorForAttachment}
           onRemoveAttachment={handleRemoveAttachment}
+          onCategoryChange={handleAttachmentCategoryChange}
         />
       </div>
 

@@ -1,40 +1,14 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, UploadCloud, FileText, User, Receipt, Camera, Image, Crop } from 'lucide-react';
+import React from 'react';
+import { Trash2, UploadCloud, FileText, User, Camera, Image, Crop } from 'lucide-react';
 
 function InvoiceForm({
   attachments = [],
   onOpenScanner,
   onFileChange,
   onOpenEditor,
-  onRemoveAttachment
+  onRemoveAttachment,
+  onCategoryChange
 }) {
-  const [items, setItems] = useState([{ id: 1, name: '', qty: 1, price: '' }]);
-
-  const handleAddItem = () => {
-    setItems([...items, { id: Date.now(), name: '', qty: 1, price: '' }]);
-  };
-
-  const handleRemoveItem = (id) => {
-    if (items.length > 1) {
-      setItems(items.filter(item => item.id !== id));
-    }
-  };
-
-  const handleItemChange = (id, field, value) => {
-    setItems(items.map(item =>
-      item.id === id ? { ...item, [field]: value } : item
-    ));
-  };
-
-  const calculateSubtotal = () => {
-    return items.reduce((sum, item) => {
-      const price = parseFloat(item.price) || 0;
-      const qty = parseFloat(item.qty) || 0;
-      return sum + (qty * price);
-    }, 0);
-  };
-
-  const total = calculateSubtotal();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -42,14 +16,27 @@ function InvoiceForm({
     const data = Object.fromEntries(formData.entries());
 
     const invoicePayload = {
-      ...data,
-      items,
-      total,
-      attachments: attachments.map(att => att.file), // actual File objects binary for upload
+      fullName: data.fullName,
+      email: data.email,
+      phone: data.phone,
+      invoiceNumber: data.invoiceNumber,
+      invoiceDate: data.invoiceDate,
+      totalAmount: parseFloat(data.totalAmount) || 0,
+      attachments: attachments.map(att => ({
+        name: att.name,
+        size: att.size,
+        category: att.category
+      })),
+      files: attachments.map(att => att.file) // actual File binaries for uploading
     };
 
     console.log('Submitting Invoice Payload:', invoicePayload);
-    alert('Form submitted! Ready to connect to Firebase / Google Sheets.\n\nCheck console to see the JSON payload!');
+    alert(
+      'Form submitted successfully!\n' +
+      `Total Claim: Rp ${(parseFloat(data.totalAmount) || 0).toLocaleString('id-ID')}\n` +
+      `Jumlah Bukti: ${attachments.length} Struk\n\n` +
+      'Check console to see the JSON payload!'
+    );
   };
 
   return (
@@ -70,11 +57,11 @@ function InvoiceForm({
           <div className="grid-2">
             <div className="input-group">
               <label htmlFor="email">Email</label>
-              <input id="email" name="email" type="email" placeholder="john@email.com" />
+              <input id="email" name="email" type="email" placeholder="john@email.com" required />
             </div>
             <div className="input-group">
               <label htmlFor="phone">Nomor Telepon</label>
-              <input id="phone" name="phone" type="tel" placeholder="081234567890" />
+              <input id="phone" name="phone" type="tel" placeholder="081234567890" required />
             </div>
           </div>
         </div>
@@ -92,69 +79,17 @@ function InvoiceForm({
               <input id="invoiceDate" name="invoiceDate" type="date" required />
             </div>
           </div>
-        </div>
-
-        {/* Items Section */}
-        <div className="section">
-          <h2 className="section-title"><Receipt size={20} /> Items</h2>
-          {items.map((item) => (
-            <div key={item.id} className="item-row">
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <input
-                  type="text"
-                  placeholder="Item description"
-                  value={item.name}
-                  onChange={(e) => handleItemChange(item.id, 'name', e.target.value)}
-                  required
-                />
-              </div>
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <input
-                  type="number"
-                  placeholder="Qty"
-                  min="1"
-                  step="any"
-                  value={item.qty}
-                  onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)}
-                  required
-                />
-              </div>
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <input
-                  type="number"
-                  className="no-spin"
-                  placeholder="Price"
-                  min="0"
-                  value={item.price}
-                  onChange={(e) => handleItemChange(item.id, 'price', e.target.value)}
-                  required
-                />
-              </div>
-              <button
-                type="button"
-                className="btn-icon"
-                onClick={() => handleRemoveItem(item.id)}
-                disabled={items.length === 1}
-                style={{
-                  opacity: items.length === 1 ? 0.4 : 1,
-                  cursor: items.length === 1 ? 'not-allowed' : 'pointer'
-                }}
-                title="Remove Item"
-              >
-                <Trash2 size={20} />
-              </button>
-            </div>
-          ))}
-
-          <button type="button" className="btn btn-secondary" onClick={handleAddItem}>
-            <Plus size={18} /> Add Item
-          </button>
-
-          <div className="totals">
-            <div className="total-row grand">
-              <span>Total Invoice:</span>
-              <span>Rp {total.toLocaleString('id-ID')}</span>
-            </div>
+          <div className="input-group" style={{ marginTop: '0.5rem' }}>
+            <label htmlFor="totalAmount">Total Nominal (Rp)</label>
+            <input
+              id="totalAmount"
+              name="totalAmount"
+              type="number"
+              className="no-spin"
+              placeholder="Masukkan total nominal struk/invoice"
+              min="0"
+              required
+            />
           </div>
         </div>
 
@@ -204,6 +139,22 @@ function InvoiceForm({
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         {att.size ? `${(att.size / 1024).toFixed(1)} KB` : ''}
                       </span>
+                      
+                      {/* Attachment Category Dropdown */}
+                      <div className="input-group" style={{ marginBottom: 0, marginTop: '0.5rem', maxWidth: '200px' }}>
+                        <select
+                          value={att.category}
+                          onChange={(e) => onCategoryChange(att.id, e.target.value)}
+                          required
+                          style={{ padding: '0.4rem', fontSize: '0.85rem' }}
+                        >
+                          <option value="" disabled>-- Pilih Kategori --</option>
+                          <option value="Tiket">Tiket</option>
+                          <option value="Makanan">Makanan</option>
+                          <option value="Transportasi">Transportasi</option>
+                          <option value="Lainnya">Lainnya</option>
+                        </select>
+                      </div>
                     </div>
                     <div className="scanned-preview-actions">
                       <button
@@ -227,16 +178,6 @@ function InvoiceForm({
                 ))}
               </div>
             )}
-          </div>
-          <div className="input-group" style={{ marginTop: '1rem' }}>
-            <label htmlFor="category">Kategori Invoice</label>
-            <select id="category" name="category" defaultValue="" required>
-              <option value="" disabled>-- Pilih Kategori --</option>
-              <option value="Tiket">Tiket</option>
-              <option value="Makanan">Makanan</option>
-              <option value="Transportasi">Transportasi</option>
-              <option value="Lainnya">Lainnya</option>
-            </select>
           </div>
         </div>
 
