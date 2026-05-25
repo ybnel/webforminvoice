@@ -55,6 +55,15 @@ function App() {
     ));
   };
 
+  const handleClearAttachments = () => {
+    attachments.forEach(att => {
+      if (att.url && att.url.startsWith('blob:')) {
+        URL.revokeObjectURL(att.url);
+      }
+    });
+    setAttachments([]);
+  };
+
   return (
     <>
       <div style={{ display: isScannerOpen ? 'none' : 'block' }}>
@@ -65,6 +74,7 @@ function App() {
           onOpenEditor={handleOpenEditorForAttachment}
           onRemoveAttachment={handleRemoveAttachment}
           onCategoryChange={handleAttachmentCategoryChange}
+          onClearAttachments={handleClearAttachments}
         />
       </div>
 

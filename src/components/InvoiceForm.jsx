@@ -1,5 +1,8 @@
-import React from 'react';
-import { Trash2, UploadCloud, FileText, User, Camera, Image, Crop } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trash2, UploadCloud, FileText, User, Camera, Image, Crop, Loader2 } from 'lucide-react';
+import { db, storage } from '../firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 function InvoiceForm({
   attachments = [],
@@ -7,40 +10,137 @@ function InvoiceForm({
   onFileChange,
   onOpenEditor,
   onRemoveAttachment,
-  onCategoryChange
+  onCategoryChange,
+  onClearAttachments
 }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+
+    if (attachments.length === 0) {
+      alert("Harap unggah minimal 1 struk/bukti kuitansi.");
+      return;
+    }
+
+    const missingCategory = attachments.some(att => !att.category);
+    if (missingCategory) {
+      alert("Harap pilih kategori untuk semua struk yang diunggah.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitStatus('Mengunggah berkas struk ke Firebase Storage...');
+
+    const formElement = e.currentTarget;
+    const formData = new FormData(formElement);
     const data = Object.fromEntries(formData.entries());
 
-    const invoicePayload = {
-      fullName: data.fullName,
-      email: data.email,
-      phone: data.phone,
-      invoiceNumber: data.invoiceNumber,
-      invoiceDate: data.invoiceDate,
-      totalAmount: parseFloat(data.totalAmount) || 0,
-      attachments: attachments.map(att => ({
-        name: att.name,
-        size: att.size,
-        category: att.category
-      })),
-      files: attachments.map(att => att.file) // actual File binaries for uploading
-    };
+    try {
+      // 1. Upload all attachments to Firebase Storage
+      const uploadPromises = attachments.map(async (att) => {
+        const fileExtension = att.file.name.split('.').pop() || 'png';
+        const storagePath = `reimbursements/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExtension}`;
+        const storageRef = ref(storage, storagePath);
+        
+        await uploadBytes(storageRef, att.file);
+        const downloadUrl = await getDownloadURL(storageRef);
+        
+        return {
+          name: att.name,
+          size: att.size,
+          category: att.category,
+          url: downloadUrl
+        };
+      });
 
-    console.log('Submitting Invoice Payload:', invoicePayload);
-    alert(
-      'Form submitted successfully!\n' +
-      `Total Claim: Rp ${(parseFloat(data.totalAmount) || 0).toLocaleString('id-ID')}\n` +
-      `Jumlah Bukti: ${attachments.length} Struk\n\n` +
-      'Check console to see the JSON payload!'
-    );
+      const uploadedFiles = await Promise.all(uploadPromises);
+
+      // 2. Save structured record to Cloud Firestore
+      setSubmitStatus('Menyimpan data klaim ke Firestore...');
+      const docRef = await addDoc(collection(db, "reimbursements"), {
+        fullName: data.fullName,
+        email: data.email,
+        phone: data.phone,
+        invoiceNumber: data.invoiceNumber,
+        invoiceDate: data.invoiceDate,
+        totalAmount: parseFloat(data.totalAmount) || 0,
+        attachments: uploadedFiles,
+        createdAt: new Date()
+      });
+
+      console.log("Document written with ID: ", docRef.id);
+
+      // 3. Send data to Google Sheets via Webhook
+      const webhookUrl = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
+      if (webhookUrl && webhookUrl !== 'YOUR_GOOGLE_SHEETS_WEBHOOK_URL' && webhookUrl.trim() !== '') {
+        setSubmitStatus('Mencatat klaim ke Google Sheets...');
+        try {
+          await fetch(webhookUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              fullName: data.fullName,
+              email: data.email,
+              phone: data.phone,
+              invoiceNumber: data.invoiceNumber,
+              invoiceDate: data.invoiceDate,
+              totalAmount: parseFloat(data.totalAmount) || 0,
+              attachments: uploadedFiles.map(f => ({ name: f.name, category: f.category, url: f.url }))
+            })
+          });
+        } catch (sheetError) {
+          console.error("Gagal mengirim ke Google Sheets:", sheetError);
+        }
+      }
+
+      alert(
+        'Klaim reimbursement berhasil dikirim!\n' +
+        `Total: Rp ${(parseFloat(data.totalAmount) || 0).toLocaleString('id-ID')}\n` +
+        `Data tersimpan di Firebase & Google Sheets.`
+      );
+
+      // Reset form and attachments
+      formElement.reset();
+      onClearAttachments();
+
+    } catch (error) {
+      console.error("Submission error:", error);
+      alert("Terjadi kesalahan saat mengirim data. Silakan coba lagi.\n\nDetail: " + error.message);
+    } finally {
+      setIsSubmitting(false);
+      setSubmitStatus('');
+    }
   };
 
   return (
-    <div className="form-container">
+    <div className="form-container" style={{ position: 'relative' }}>
+      {/* Loading Overlay */}
+      {isSubmitting && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '1rem',
+          zIndex: 100,
+          borderRadius: '16px'
+        }}>
+          <Loader2 className="scanner-spinner" size={40} style={{ color: 'var(--primary)' }} />
+          <p style={{ fontWeight: '600', color: 'var(--text-main)', textAlign: 'center', padding: '0 1rem' }}>
+            {submitStatus}
+          </p>
+        </div>
+      )}
+
       <div className="header">
         <h1>Invoice Submission</h1>
         <p>Please enter your invoice details below</p>
@@ -52,16 +152,16 @@ function InvoiceForm({
           <h2 className="section-title"><User size={20} /> Data Diri</h2>
           <div className="input-group">
             <label htmlFor="fullName">Nama Lengkap</label>
-            <input id="fullName" name="fullName" type="text" placeholder="John Doe" required />
+            <input id="fullName" name="fullName" type="text" placeholder="John Doe" required disabled={isSubmitting} />
           </div>
           <div className="grid-2">
             <div className="input-group">
               <label htmlFor="email">Email</label>
-              <input id="email" name="email" type="email" placeholder="john@email.com" required />
+              <input id="email" name="email" type="email" placeholder="john@email.com" required disabled={isSubmitting} />
             </div>
             <div className="input-group">
               <label htmlFor="phone">Nomor Telepon</label>
-              <input id="phone" name="phone" type="tel" placeholder="081234567890" required />
+              <input id="phone" name="phone" type="tel" placeholder="081234567890" required disabled={isSubmitting} />
             </div>
           </div>
         </div>
@@ -72,11 +172,11 @@ function InvoiceForm({
           <div className="grid-2">
             <div className="input-group">
               <label htmlFor="invoiceNumber">Invoice Number</label>
-              <input id="invoiceNumber" name="invoiceNumber" type="text" placeholder="INV-2026-001" required />
+              <input id="invoiceNumber" name="invoiceNumber" type="text" placeholder="INV-2026-001" required disabled={isSubmitting} />
             </div>
             <div className="input-group">
               <label htmlFor="invoiceDate">Invoice Date</label>
-              <input id="invoiceDate" name="invoiceDate" type="date" required />
+              <input id="invoiceDate" name="invoiceDate" type="date" required disabled={isSubmitting} />
             </div>
           </div>
           <div className="input-group" style={{ marginTop: '0.5rem' }}>
@@ -89,6 +189,7 @@ function InvoiceForm({
               placeholder="Masukkan total nominal struk/invoice"
               min="0"
               required
+              disabled={isSubmitting}
             />
           </div>
         </div>
@@ -105,12 +206,13 @@ function InvoiceForm({
                 className="btn btn-secondary"
                 style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500' }}
                 onClick={onOpenScanner}
+                disabled={isSubmitting}
               >
                 <Camera size={24} style={{ margin: '0 auto' }} />
                 <span>Ambil Foto (Scan)</span>
               </button>
 
-              <label className="btn btn-secondary" style={{ flex: 1, textAlign: 'center', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500' }}>
+              <label className={`btn btn-secondary ${isSubmitting ? 'disabled' : ''}`} style={{ flex: 1, textAlign: 'center', cursor: isSubmitting ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500', opacity: isSubmitting ? 0.6 : 1 }}>
                 <Image size={24} style={{ margin: '0 auto' }} />
                 <span>Pilih Galeri</span>
                 <input
@@ -119,6 +221,7 @@ function InvoiceForm({
                   multiple
                   style={{ display: 'none' }}
                   onChange={onFileChange}
+                  disabled={isSubmitting}
                 />
               </label>
             </div>
@@ -146,6 +249,7 @@ function InvoiceForm({
                           value={att.category}
                           onChange={(e) => onCategoryChange(att.id, e.target.value)}
                           required
+                          disabled={isSubmitting}
                           style={{ padding: '0.4rem', fontSize: '0.85rem' }}
                         >
                           <option value="" disabled>-- Pilih Kategori --</option>
@@ -162,6 +266,7 @@ function InvoiceForm({
                         className="btn-icon-secondary"
                         onClick={() => onOpenEditor(att)}
                         title="Potong & Rapikan"
+                        disabled={isSubmitting}
                       >
                         <Crop size={20} />
                       </button>
@@ -170,6 +275,7 @@ function InvoiceForm({
                         className="btn-icon"
                         onClick={() => onRemoveAttachment(att.id)}
                         title="Hapus Lampiran"
+                        disabled={isSubmitting}
                       >
                         <Trash2 size={20} />
                       </button>
@@ -181,7 +287,7 @@ function InvoiceForm({
           </div>
         </div>
 
-        <button type="submit" className="btn btn-primary">
+        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
           Submit Invoice
         </button>
       </form>
