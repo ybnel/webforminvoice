@@ -166,7 +166,7 @@ function DocumentScanner({
       canvas.height = video.videoHeight || 480;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/png');
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
 
       setRawCapturedPhoto(dataUrl);
       setScanStep('cropping');
@@ -282,7 +282,7 @@ function DocumentScanner({
         };
 
         const croppedCanvas = scannerInstance.extractPaper(img, 600, 800, originalCorners);
-        const dataUrl = croppedCanvas.toDataURL('image/png');
+        const dataUrl = croppedCanvas.toDataURL('image/jpeg', 0.6);
         setCapturedImage(dataUrl);
         setScanStep('preview');
       } catch (err) {
@@ -320,7 +320,7 @@ function DocumentScanner({
 
             const tempCanvas = document.createElement('canvas');
             window.cv.imshow(tempCanvas, dst);
-            setFilteredImage(tempCanvas.toDataURL('image/png'));
+            setFilteredImage(tempCanvas.toDataURL('image/jpeg', 0.6));
 
             src.delete();
             dst.delete();
@@ -355,7 +355,7 @@ function DocumentScanner({
     if (!filteredImage) return;
 
     const timestamp = Date.now();
-    const generatedFileName = `scanned_invoice_${timestamp}.png`;
+    const generatedFileName = `scanned_invoice_${timestamp}.jpg`;
     const file = dataURLtoFile(filteredImage, generatedFileName);
 
     if (editAttachment) {

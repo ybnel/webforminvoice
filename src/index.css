@@ -628,3 +628,22 @@ input[type="number"].no-spin {
     max-height: 55vh;
   }
 }
+
+@media print {
+  body {
+    background: white !important;
+    padding: 0 !important;
+    color: black !important;
+  }
+  .form-container {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    animation: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

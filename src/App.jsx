@@ -1,18 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import InvoiceForm from './components/InvoiceForm';
 import DocumentScanner from './components/DocumentScanner';
+import ReceiptViewer from './components/ReceiptViewer';
 
 function App() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const [uploadQueue, setUploadQueue] = useState([]);
   const [editAttachment, setEditAttachment] = useState(null);
+  const [viewDocumentId, setViewDocumentId] = useState(null);
+
+  // Check URL parameters for ?view=DOC_ID on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewId = urlParams.get('view');
+    if (viewId) {
+      setViewDocumentId(viewId);
+    }
+  }, []);
+
+  const handleBackToForm = () => {
+    // Clear query parameter in browser history
+    window.history.pushState({}, '', window.location.pathname);
+    setViewDocumentId(null);
+  };
 
   const handleOpenScanner = () => {
     setEditAttachment(null);
     setUploadQueue([]);
     setIsScannerOpen(true);
-  };
+  };  
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -63,6 +80,10 @@ function App() {
     });
     setAttachments([]);
   };
+
+  if (viewDocumentId) {
+    return <ReceiptViewer documentId={viewDocumentId} onBack={handleBackToForm} />;
+  }
 
   return (
     <>

@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
 import { Trash2, UploadCloud, FileText, User, Camera, Image, Crop, Loader2 } from 'lucide-react';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+// Helper function to read file as Base64 Data URL
+const fileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+};
 
 function InvoiceForm({
   attachments = [],
@@ -31,27 +40,26 @@ function InvoiceForm({
     }
 
     setIsSubmitting(true);
-    setSubmitStatus('Mengunggah berkas struk ke Firebase Storage...');
+    setSubmitStatus('Memproses berkas struk ke Base64...');
 
     const formElement = e.currentTarget;
     const formData = new FormData(formElement);
     const data = Object.fromEntries(formData.entries());
 
     try {
-      // 1. Upload all attachments to Firebase Storage
+      // 1. Process files to Base64 strings
       const uploadPromises = attachments.map(async (att) => {
-        const fileExtension = att.file.name.split('.').pop() || 'png';
-        const storagePath = `reimbursements/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExtension}`;
-        const storageRef = ref(storage, storagePath);
-        
-        await uploadBytes(storageRef, att.file);
-        const downloadUrl = await getDownloadURL(storageRef);
+        let base64Url = att.url;
+        // If it's a blob URL (un-cropped gallery upload), read the file as Base64
+        if (att.url.startsWith('blob:')) {
+          base64Url = await fileToBase64(att.file);
+        }
         
         return {
           name: att.name,
           size: att.size,
           category: att.category,
-          url: downloadUrl
+          url: base64Url
         };
       });
 
@@ -72,7 +80,7 @@ function InvoiceForm({
 
       console.log("Document written with ID: ", docRef.id);
 
-      // 3. Send data to Google Sheets via Webhook
+      // 3. Send view portal link to Google Sheets via Webhook
       const webhookUrl = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
       if (webhookUrl && webhookUrl !== 'YOUR_GOOGLE_SHEETS_WEBHOOK_URL' && webhookUrl.trim() !== '') {
         setSubmitStatus('Mencatat klaim ke Google Sheets...');
@@ -90,7 +98,11 @@ function InvoiceForm({
               invoiceNumber: data.invoiceNumber,
               invoiceDate: data.invoiceDate,
               totalAmount: parseFloat(data.totalAmount) || 0,
-              attachments: uploadedFiles.map(f => ({ name: f.name, category: f.category, url: f.url }))
+              // We pass the portal link as the url so it logs in Google Sheets
+              attachments: [{ 
+                category: 'Portal Struk', 
+                url: `${window.location.origin}/?view=${docRef.id}` 
+              }]
             })
           });
         } catch (sheetError) {
@@ -101,7 +113,7 @@ function InvoiceForm({
       alert(
         'Klaim reimbursement berhasil dikirim!\n' +
         `Total: Rp ${(parseFloat(data.totalAmount) || 0).toLocaleString('id-ID')}\n` +
-        `Data tersimpan di Firebase & Google Sheets.`
+        `Data tersimpan di Firestore & Google Sheets.`
       );
 
       // Reset form and attachments
