@@ -66,9 +66,9 @@ function App() {
     });
   };
 
-  const handleAttachmentCategoryChange = (id, category) => {
+  const handleAttachmentFieldChange = (id, field, value) => {
     setAttachments(prev => prev.map(att =>
-      att.id === id ? { ...att, category } : att
+      att.id === id ? { ...att, [field]: value } : att
     ));
   };
 
@@ -94,7 +94,7 @@ function App() {
           onFileChange={handleFileChange}
           onOpenEditor={handleOpenEditorForAttachment}
           onRemoveAttachment={handleRemoveAttachment}
-          onCategoryChange={handleAttachmentCategoryChange}
+          onFieldChange={handleAttachmentFieldChange}
           onClearAttachments={handleClearAttachments}
         />
       </div>

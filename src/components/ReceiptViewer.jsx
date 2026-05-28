@@ -56,9 +56,9 @@ function ReceiptViewer({ documentId, onBack }) {
   }
 
   return (
-    <div className="form-container receipt-viewer-print" style={{ padding: '2rem' }}>
+    <div className="form-container receipt-viewer-print">
       {/* Header Actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }} className="no-print">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '2rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }} className="no-print">
         <button type="button" className="btn btn-secondary" onClick={onBack} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
           <ArrowLeft size={16} /> Buat Klaim Baru
         </button>
@@ -68,12 +68,12 @@ function ReceiptViewer({ documentId, onBack }) {
       </div>
 
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-        <h1 style={{ color: 'var(--primary)', fontSize: '1.8rem', fontWeight: '700', marginBottom: '0.5rem' }}>Bukti Klaim Reimbursement</h1>
+        <h1 style={{ color: 'var(--primary)', fontSize: '1.8rem', fontWeight: '700', marginBottom: '0.5rem' }}>Bukti Klaim</h1>
         <p style={{ color: 'var(--text-muted)' }}>ID Transaksi: {documentId}</p>
       </div>
 
       {/* Info Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2.5rem' }}>
+      <div className="grid-2" style={{ gap: '1.5rem', marginBottom: '2.5rem' }}>
         {/* Data Diri */}
         <div style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
@@ -81,6 +81,7 @@ function ReceiptViewer({ documentId, onBack }) {
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem' }}>
             <div><strong>Nama:</strong> {claim.fullName}</div>
+            {claim.tripPurpose && <div><strong>Keperluan:</strong> {claim.tripPurpose}</div>}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <Mail size={14} style={{ color: 'var(--text-muted)' }} /> {claim.email}
             </div>
@@ -90,17 +91,17 @@ function ReceiptViewer({ documentId, onBack }) {
           </div>
         </div>
 
-        {/* Invoice Details */}
+        {/* Detail Klaim */}
         <div style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             <FileText size={18} style={{ color: 'var(--primary)' }} /> Detail Klaim
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem' }}>
-            <div><strong>Invoice Number:</strong> {claim.invoiceNumber}</div>
+            {claim.invoiceNumber && <div><strong>Invoice Number:</strong> {claim.invoiceNumber}</div>}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Calendar size={14} style={{ color: 'var(--text-muted)' }} /> {claim.invoiceDate}
+              <Calendar size={14} style={{ color: 'var(--text-muted)' }} /> <strong>Tanggal Perjalanan:</strong> &nbsp;{claim.tripDate || claim.invoiceDate}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: '700', fontSize: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: '700', fontSize: '1rem', marginTop: '0.25rem' }}>
               <Banknote size={16} /> Rp {claim.totalAmount.toLocaleString('id-ID')}
             </div>
           </div>
@@ -116,12 +117,26 @@ function ReceiptViewer({ documentId, onBack }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             {claim.attachments.map((att, idx) => (
               <div key={idx} style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px dashed var(--border)', paddingBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px dashed var(--border)', paddingBottom: '0.5rem', alignItems: 'center' }}>
                   <span style={{ fontWeight: '600', fontSize: '0.95rem' }}>{idx + 1}. {att.name}</span>
                   <span style={{ background: 'var(--primary)', color: 'white', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600' }}>
                     Kategori: {att.category}
                   </span>
                 </div>
+                
+                {/* Detail Struk */}
+                {(att.invoiceNumber || att.invoiceDate || att.amount !== undefined) && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', background: '#f8fafc', padding: '0.85rem 1.25rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                    {att.invoiceNumber && <div><strong>No. Invoice:</strong> &nbsp;{att.invoiceNumber}</div>}
+                    {att.invoiceDate && <div><strong>Tanggal Struk:</strong> &nbsp;{att.invoiceDate}</div>}
+                    {att.amount !== undefined && (
+                      <div style={{ color: 'var(--primary)', fontWeight: '700' }}>
+                        <strong>Nominal:</strong> &nbsp;Rp {att.amount.toLocaleString('id-ID')}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {att.url && (
                   <div style={{ textAlign: 'center', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
                     <img

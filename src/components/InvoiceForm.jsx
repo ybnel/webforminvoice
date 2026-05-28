@@ -19,11 +19,14 @@ function InvoiceForm({
   onFileChange,
   onOpenEditor,
   onRemoveAttachment,
-  onCategoryChange,
+  onFieldChange,
   onClearAttachments
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState('');
+
+  // Calculate total amount automatically
+  const totalAmount = attachments.reduce((sum, att) => sum + (parseFloat(att.amount) || 0), 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,9 +36,17 @@ function InvoiceForm({
       return;
     }
 
-    const missingCategory = attachments.some(att => !att.category);
-    if (missingCategory) {
-      alert("Harap pilih kategori untuk semua struk yang diunggah.");
+    const missingDetails = attachments.some(att => 
+      !att.category || !att.invoiceNumber || !att.invoiceDate || !att.amount
+    );
+    if (missingDetails) {
+      alert("Harap lengkapi semua informasi (Kategori, No. Invoice, Tanggal Struk, & Nominal) untuk semua struk yang diunggah.");
+      return;
+    }
+
+    const invalidAmount = attachments.some(att => parseFloat(att.amount) <= 0 || isNaN(parseFloat(att.amount)));
+    if (invalidAmount) {
+      alert("Harap masukkan nominal yang valid untuk semua struk.");
       return;
     }
 
@@ -59,6 +70,9 @@ function InvoiceForm({
           name: att.name,
           size: att.size,
           category: att.category,
+          invoiceNumber: att.invoiceNumber,
+          invoiceDate: att.invoiceDate,
+          amount: parseFloat(att.amount) || 0,
           url: base64Url
         };
       });
@@ -71,9 +85,9 @@ function InvoiceForm({
         fullName: data.fullName,
         email: data.email,
         phone: data.phone,
-        invoiceNumber: data.invoiceNumber,
-        invoiceDate: data.invoiceDate,
-        totalAmount: parseFloat(data.totalAmount) || 0,
+        tripPurpose: data.tripPurpose,
+        tripDate: data.tripDate,
+        totalAmount: totalAmount,
         attachments: uploadedFiles,
         createdAt: new Date()
       });
@@ -95,12 +109,13 @@ function InvoiceForm({
               fullName: data.fullName,
               email: data.email,
               phone: data.phone,
-              invoiceNumber: data.invoiceNumber,
-              invoiceDate: data.invoiceDate,
-              totalAmount: parseFloat(data.totalAmount) || 0,
+              tripPurpose: data.tripPurpose,
+              invoiceNumber: attachments.map(att => att.invoiceNumber).join(', '), // Combined
+              invoiceDate: data.tripDate, // Tanggal Perjalanan mapped to Date column
+              totalAmount: totalAmount,
               // We pass the portal link as the url so it logs in Google Sheets
               attachments: [{ 
-                category: 'Portal Struk', 
+                category: '', 
                 url: `${window.location.origin}/?view=${docRef.id}` 
               }]
             })
@@ -112,7 +127,7 @@ function InvoiceForm({
 
       alert(
         'Klaim reimbursement berhasil dikirim!\n' +
-        `Total: Rp ${(parseFloat(data.totalAmount) || 0).toLocaleString('id-ID')}\n` +
+        `Total: Rp ${totalAmount.toLocaleString('id-ID')}\n` +
         `Data tersimpan di Firestore & Google Sheets.`
       );
 
@@ -162,47 +177,48 @@ function InvoiceForm({
         {/* Client Info Section */}
         <div className="section">
           <h2 className="section-title"><User size={20} /> Data Diri</h2>
-          <div className="input-group">
-            <label htmlFor="fullName">Nama Lengkap</label>
-            <input id="fullName" name="fullName" type="text" placeholder="John Doe" required disabled={isSubmitting} />
-          </div>
           <div className="grid-2">
             <div className="input-group">
-              <label htmlFor="email">Email</label>
-              <input id="email" name="email" type="email" placeholder="john@email.com" required disabled={isSubmitting} />
+              <label htmlFor="fullName">Nama Lengkap</label>
+              <input id="fullName" name="fullName" type="text" placeholder="Your Name" required disabled={isSubmitting} />
             </div>
             <div className="input-group">
               <label htmlFor="phone">Nomor Telepon</label>
               <input id="phone" name="phone" type="tel" placeholder="081234567890" required disabled={isSubmitting} />
             </div>
           </div>
+          <div className="grid-2" style={{ marginTop: '0.5rem' }}>
+            <div className="input-group">
+              <label htmlFor="email">Email</label>
+              <input id="email" name="email" type="email" placeholder="yourname@email.com" required disabled={isSubmitting} />
+            </div>
+            <div className="input-group">
+              <label htmlFor="tripPurpose">Keperluan / Tujuan Perjalanan</label>
+              <input id="tripPurpose" name="tripPurpose" type="text" placeholder="Business trip to Bandung" required disabled={isSubmitting} />
+            </div>
+          </div>
         </div>
 
         {/* Invoice Info Section */}
         <div className="section">
-          <h2 className="section-title"><FileText size={20} /> Invoice Details</h2>
+          <h2 className="section-title"><FileText size={20} /> Detail Pengajuan</h2>
           <div className="grid-2">
             <div className="input-group">
-              <label htmlFor="invoiceNumber">Invoice Number</label>
-              <input id="invoiceNumber" name="invoiceNumber" type="text" placeholder="INV-2026-001" required disabled={isSubmitting} />
+              <label htmlFor="tripDate">Tanggal Perjalanan</label>
+              <input id="tripDate" name="tripDate" type="date" required disabled={isSubmitting} />
             </div>
             <div className="input-group">
-              <label htmlFor="invoiceDate">Invoice Date</label>
-              <input id="invoiceDate" name="invoiceDate" type="date" required disabled={isSubmitting} />
+              <label htmlFor="totalAmount">Total Nominal (Rp)</label>
+              <input
+                id="totalAmount"
+                name="totalAmount"
+                type="text"
+                value={`Rp ${totalAmount.toLocaleString('id-ID')}`}
+                readOnly
+                disabled={isSubmitting}
+                style={{ background: '#f1f5f9', cursor: 'not-allowed', fontWeight: '700', color: 'var(--primary)' }}
+              />
             </div>
-          </div>
-          <div className="input-group" style={{ marginTop: '0.5rem' }}>
-            <label htmlFor="totalAmount">Total Nominal (Rp)</label>
-            <input
-              id="totalAmount"
-              name="totalAmount"
-              type="number"
-              className="no-spin"
-              placeholder="Masukkan total nominal struk/invoice"
-              min="0"
-              required
-              disabled={isSubmitting}
-            />
           </div>
         </div>
 
@@ -239,58 +255,109 @@ function InvoiceForm({
             </div>
 
             {attachments.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
                 {attachments.map((att) => (
-                  <div key={att.id} className="scanned-preview-container" style={{ marginTop: 0 }}>
-                    {att.url ? (
-                      <img src={att.url} className="scanned-preview-thumb" alt="Preview" />
-                    ) : (
-                      <div className="scanned-preview-thumb" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e2e8f0' }}>
-                        <FileText size={28} style={{ color: '#64748b' }} />
+                  <div key={att.id} className="scanned-preview-container" style={{ marginTop: 0, flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}>
+                    {/* Top Row: Thumbnail, Name, Actions */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%' }}>
+                      {att.url ? (
+                        <img src={att.url} className="scanned-preview-thumb" alt="Preview" style={{ width: '40px', height: '50px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border)' }} />
+                      ) : (
+                        <div className="scanned-preview-thumb" style={{ width: '40px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e2e8f0', borderRadius: '4px' }}>
+                          <FileText size={20} style={{ color: '#64748b' }} />
+                        </div>
+                      )}
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                        <span className="scanned-preview-name" style={{ fontSize: '0.85rem' }}>{att.name}</span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {att.size ? `${(att.size / 1024).toFixed(1)} KB` : ''}
+                        </span>
                       </div>
-                    )}
-                    <div className="scanned-preview-info">
-                      <span className="scanned-preview-name">{att.name}</span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {att.size ? `${(att.size / 1024).toFixed(1)} KB` : ''}
-                      </span>
-                      
-                      {/* Attachment Category Dropdown */}
-                      <div className="input-group" style={{ marginBottom: 0, marginTop: '0.5rem', maxWidth: '200px' }}>
+                      <div className="scanned-preview-actions" style={{ flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          className="btn-icon-secondary"
+                          onClick={() => onOpenEditor(att)}
+                          title="Potong & Rapikan"
+                          disabled={isSubmitting}
+                          style={{ padding: '0.35rem' }}
+                        >
+                          <Crop size={18} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-icon"
+                          onClick={() => onRemoveAttachment(att.id)}
+                          title="Hapus Lampiran"
+                          disabled={isSubmitting}
+                          style={{ padding: '0.35rem' }}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bottom Row: Inputs Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', width: '100%', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+                      {/* Kategori */}
+                      <div className="input-group" style={{ marginBottom: 0 }}>
+                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Kategori</label>
                         <select
-                          value={att.category}
-                          onChange={(e) => onCategoryChange(att.id, e.target.value)}
+                          value={att.category || ''}
+                          onChange={(e) => onFieldChange(att.id, 'category', e.target.value)}
                           required
                           disabled={isSubmitting}
-                          style={{ padding: '0.4rem', fontSize: '0.85rem' }}
+                          style={{ padding: '0.45rem 0.5rem', fontSize: '0.85rem', borderRadius: '6px', height: 'auto', border: '1px solid var(--border)' }}
                         >
-                          <option value="" disabled>-- Pilih Kategori --</option>
+                          <option value="" disabled>-- Kategori --</option>
                           <option value="Tiket">Tiket</option>
                           <option value="Makanan">Makanan</option>
                           <option value="Transportasi">Transportasi</option>
                           <option value="Lainnya">Lainnya</option>
                         </select>
                       </div>
-                    </div>
-                    <div className="scanned-preview-actions">
-                      <button
-                        type="button"
-                        className="btn-icon-secondary"
-                        onClick={() => onOpenEditor(att)}
-                        title="Potong & Rapikan"
-                        disabled={isSubmitting}
-                      >
-                        <Crop size={20} />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon"
-                        onClick={() => onRemoveAttachment(att.id)}
-                        title="Hapus Lampiran"
-                        disabled={isSubmitting}
-                      >
-                        <Trash2 size={20} />
-                      </button>
+
+                      {/* No. Invoice */}
+                      <div className="input-group" style={{ marginBottom: 0 }}>
+                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>No. Invoice</label>
+                        <input
+                          type="text"
+                          placeholder="Contoh: INV-101"
+                          value={att.invoiceNumber || ''}
+                          onChange={(e) => onFieldChange(att.id, 'invoiceNumber', e.target.value)}
+                          required
+                          disabled={isSubmitting}
+                          style={{ padding: '0.45rem 0.5rem', fontSize: '0.85rem', borderRadius: '6px', height: 'auto', border: '1px solid var(--border)' }}
+                        />
+                      </div>
+
+                      {/* Tanggal Struk */}
+                      <div className="input-group" style={{ marginBottom: 0 }}>
+                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Tanggal Struk</label>
+                        <input
+                          type="date"
+                          value={att.invoiceDate || ''}
+                          onChange={(e) => onFieldChange(att.id, 'invoiceDate', e.target.value)}
+                          required
+                          disabled={isSubmitting}
+                          style={{ padding: '0.45rem 0.5rem', fontSize: '0.85rem', borderRadius: '6px', height: 'auto', border: '1px solid var(--border)' }}
+                        />
+                      </div>
+
+                      {/* Nominal */}
+                      <div className="input-group" style={{ marginBottom: 0 }}>
+                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Nominal (Rp)</label>
+                        <input
+                          type="number"
+                          placeholder="150000"
+                          className="no-spin"
+                          value={att.amount || ''}
+                          onChange={(e) => onFieldChange(att.id, 'amount', e.target.value)}
+                          required
+                          disabled={isSubmitting}
+                          style={{ padding: '0.45rem 0.5rem', fontSize: '0.85rem', borderRadius: '6px', height: 'auto', border: '1px solid var(--border)' }}
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}

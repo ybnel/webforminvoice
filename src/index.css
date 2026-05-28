@@ -647,3 +647,13 @@ input[type="number"].no-spin {
     display: none !important;
   }
 }
+
+.receipt-viewer-print {
+  padding: 2rem;
+}
+
+@media (max-width: 600px) {
+  .receipt-viewer-print {
+    padding: 1.25rem 1rem !important;
+  }
+}
