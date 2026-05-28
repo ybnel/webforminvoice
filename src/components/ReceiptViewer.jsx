@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { FileText, Loader2, User, Phone, Mail, Calendar, DollarSign, ArrowLeft, Printer } from 'lucide-react';
+import { FileText, Loader2, User, Phone, Mail, Calendar, Banknote, ArrowLeft, Printer } from 'lucide-react';
 
 function ReceiptViewer({ documentId, onBack }) {
   const [loading, setLoading] = useState(true);
@@ -101,7 +101,7 @@ function ReceiptViewer({ documentId, onBack }) {
               <Calendar size={14} style={{ color: 'var(--text-muted)' }} /> {claim.invoiceDate}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: '700', fontSize: '1rem' }}>
-              <DollarSign size={16} /> Rp {claim.totalAmount.toLocaleString('id-ID')}
+              <Banknote size={16} /> Rp {claim.totalAmount.toLocaleString('id-ID')}
             </div>
           </div>
         </div>
