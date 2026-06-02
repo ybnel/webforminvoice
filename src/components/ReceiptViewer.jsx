@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { FileText, Loader2, User, Phone, Mail, Calendar, Banknote, ArrowLeft, Printer } from 'lucide-react';
+import { FileText, Loader2, User, Phone, Mail, Calendar, Banknote, ArrowLeft, Printer, X } from 'lucide-react';
 
 function ReceiptViewer({ documentId, onBack }) {
   const [loading, setLoading] = useState(true);
   const [claim, setClaim] = useState(null);
   const [error, setError] = useState('');
+  const [activePhoto, setActivePhoto] = useState(null);
 
+  // Fetch claim data from Firestore
   useEffect(() => {
     const fetchClaim = async () => {
       try {
@@ -32,6 +34,17 @@ function ReceiptViewer({ documentId, onBack }) {
       fetchClaim();
     }
   }, [documentId]);
+
+  // Handle closing modal on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setActivePhoto(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   if (loading) {
     return (
@@ -85,7 +98,7 @@ function ReceiptViewer({ documentId, onBack }) {
 
       {/* Info Grid */}
       <div className="grid-2" style={{ gap: '1.5rem', marginBottom: '2.5rem' }}>
-        {/* Data Diri */}
+        {/* Data Karyawan */}
         <div style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             <User size={18} style={{ color: 'var(--primary)' }} /> Data Karyawan
@@ -120,7 +133,7 @@ function ReceiptViewer({ documentId, onBack }) {
       </div>
 
       {/* Rincian Pengeluaran Table */}
-      <div id="receipt-table-header" style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '2.5rem', overflowX: 'auto' }}>
+      <div style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '2.5rem', overflowX: 'auto' }}>
         <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
           <FileText size={18} style={{ color: 'var(--primary)' }} /> Rincian Pengeluaran
         </h3>
@@ -132,7 +145,7 @@ function ReceiptViewer({ documentId, onBack }) {
               <th style={{ padding: '0.75rem 0.5rem' }}>Kategori</th>
               <th style={{ padding: '0.75rem 0.5rem' }}>No. Invoice</th>
               <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>Nominal</th>
-              <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', width: '120px' }} className="no-print">Aksi</th>
+              <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', width: '100px' }} className="no-print">Bukti</th>
             </tr>
           </thead>
           <tbody>
@@ -157,17 +170,27 @@ function ReceiptViewer({ documentId, onBack }) {
                   Rp {(att.amount || 0).toLocaleString('id-ID')}
                 </td>
                 <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }} className="no-print">
-                  <a href={`#receipt-img-${idx}`} style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    color: 'var(--primary)',
-                    textDecoration: 'none',
-                    fontWeight: '600',
-                    fontSize: '0.85rem'
-                  }}>
-                    Lihat Struk ↓
-                  </a>
+                  {att.url ? (
+                    <img
+                      src={att.url}
+                      alt="Thumbnail"
+                      onClick={() => setActivePhoto(att)}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        objectFit: 'cover',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border)',
+                        cursor: 'pointer',
+                        display: 'block',
+                        margin: '0 auto',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        transition: 'transform 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    />
+                  ) : '-'}
                 </td>
               </tr>
             ))}
@@ -205,65 +228,71 @@ function ReceiptViewer({ documentId, onBack }) {
         </div>
       </div>
 
-      {/* Receipts Attachments */}
-      <div>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-          Lampiran Struk ({claim.attachments ? claim.attachments.length : 0})
+      {/* Print-Only Receipts Attachments Section (Visible ONLY in printed PDF/paper) */}
+      <div className="only-print" style={{ marginTop: '3rem', pageBreakBefore: 'always' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1.5rem', borderBottom: '1px solid black', paddingBottom: '0.5rem' }}>
+          Lampiran Bukti Struk Kuitansi
         </h3>
-        {claim.attachments && claim.attachments.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            {claim.attachments.map((att, idx) => (
-              <div key={idx} id={`receipt-img-${idx}`} style={{ scrollMarginTop: '2rem', background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px dashed var(--border)', paddingBottom: '0.5rem', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <span style={{ fontWeight: '600', fontSize: '0.95rem' }}>{idx + 1}. {att.name}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <a href="#receipt-table-header" className="no-print" style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-muted)',
-                      textDecoration: 'none',
-                      border: '1px solid var(--border)',
-                      padding: '0.2rem 0.5rem',
-                      borderRadius: '4px',
-                      background: '#f8fafc',
-                      fontWeight: '500'
-                    }}>
-                      Kembali ke Tabel ↑
-                    </a>
-                    <span style={{ background: 'var(--primary)', color: 'white', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600' }}>
-                      Kategori: {att.category}
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Detail Struk */}
-                {(att.invoiceNumber || att.invoiceDate || att.amount !== undefined) && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', background: '#f8fafc', padding: '0.85rem 1.25rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--text-main)' }}>
-                    {att.invoiceNumber && <div><strong>No. Invoice:</strong> &nbsp;{att.invoiceNumber}</div>}
-                    {att.invoiceDate && <div><strong>Tanggal Struk:</strong> &nbsp;{att.invoiceDate}</div>}
-                    {att.amount !== undefined && (
-                      <div style={{ color: 'var(--primary)', fontWeight: '700' }}>
-                        <strong>Nominal:</strong> &nbsp;Rp {att.amount.toLocaleString('id-ID')}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {att.url && (
-                  <div style={{ textAlign: 'center', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    <img
-                      src={att.url}
-                      alt={att.name}
-                      style={{ maxWidth: '100%', maxHeight: '550px', objectFit: 'contain', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}
-                    />
-                  </div>
-                )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+          {claim.attachments && claim.attachments.map((att, idx) => (
+            <div key={idx} style={{ pageBreakInside: 'avoid', borderBottom: '1px dashed #ccc', paddingBottom: '2rem' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                <span>{idx + 1}. Kategori: {att.category || 'Lainnya'}</span>
+                <span>Nominal: Rp {(att.amount || 0).toLocaleString('id-ID')}</span>
+              </h4>
+              <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', marginBottom: '1rem', color: '#475569' }}>
+                {att.invoiceNumber && <div><strong>No. Invoice:</strong> {att.invoiceNumber}</div>}
+                {att.invoiceDate && <div><strong>Tanggal Struk:</strong> {att.invoiceDate}</div>}
               </div>
-            ))}
-          </div>
-        ) : (
-          <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center' }}>Tidak ada struk terlampir.</p>
-        )}
+              {att.url && (
+                <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                  <img
+                    src={att.url}
+                    alt={att.name}
+                    style={{ maxWidth: '100%', maxHeight: '480px', objectFit: 'contain', border: '1px solid #ccc', padding: '4px', borderRadius: '4px' }}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* Lightbox Modal Popup (Web only, overlayed) */}
+      {activePhoto && (
+        <div className="receipt-modal-overlay no-print" onClick={() => setActivePhoto(null)}>
+          <div className="receipt-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="receipt-modal-header">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                  Detail Bukti Kuitansi
+                </h4>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  {activePhoto.category} {activePhoto.invoiceNumber ? `(${activePhoto.invoiceNumber})` : ''}
+                </span>
+              </div>
+              <button className="receipt-modal-close-btn" onClick={() => setActivePhoto(null)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>
+                <X size={18} style={{ color: 'var(--text-main)' }} />
+              </button>
+            </div>
+            
+            <div style={{ fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <div><strong>Tanggal Struk:</strong> {activePhoto.invoiceDate || '-'}</div>
+              <div style={{ color: 'var(--primary)', fontWeight: '700' }}>
+                <strong>Nominal:</strong> Rp {(activePhoto.amount || 0).toLocaleString('id-ID')}
+              </div>
+            </div>
+
+            <div className="receipt-modal-img-container">
+              <img
+                src={activePhoto.url}
+                alt={activePhoto.name}
+                className="receipt-modal-img"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
