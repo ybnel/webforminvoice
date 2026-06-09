@@ -228,31 +228,47 @@ function InvoiceForm({
           <div className="input-group">
             <label>Upload Invoice File</label>
 
-            <div className="upload-options" style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500' }}
-                onClick={onOpenScanner}
-                disabled={isSubmitting}
-              >
-                <Camera size={24} style={{ margin: '0 auto' }} />
-                <span>Ambil Foto (Scan)</span>
-              </button>
-
-              <label className={`btn btn-secondary ${isSubmitting ? 'disabled' : ''}`} style={{ flex: 1, textAlign: 'center', cursor: isSubmitting ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500', opacity: isSubmitting ? 0.6 : 1 }}>
-                <Image size={24} style={{ margin: '0 auto' }} />
-                <span>Pilih Galeri</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  style={{ display: 'none' }}
-                  onChange={onFileChange}
+            {attachments.length >= 15 ? (
+              <div style={{
+                background: '#fef2f2',
+                border: '1px solid #fee2e2',
+                borderRadius: '8px',
+                padding: '0.85rem 1rem',
+                color: '#991b1b',
+                fontSize: '0.85rem',
+                fontWeight: '500',
+                textAlign: 'center',
+                marginTop: '0.5rem'
+              }}>
+                Batas maksimal 15 lampiran kuitansi telah tercapai. Harap kirim pengajuan ini terlebih dahulu atau hapus lampiran yang tidak diperlukan untuk menambahkan lampiran baru.
+              </div>
+            ) : (
+              <div className="upload-options" style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500' }}
+                  onClick={onOpenScanner}
                   disabled={isSubmitting}
-                />
-              </label>
-            </div>
+                >
+                  <Camera size={24} style={{ margin: '0 auto' }} />
+                  <span>Ambil Foto (Scan)</span>
+                </button>
+
+                <label className={`btn btn-secondary ${isSubmitting ? 'disabled' : ''}`} style={{ flex: 1, textAlign: 'center', cursor: isSubmitting ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500', opacity: isSubmitting ? 0.6 : 1 }}>
+                  <Image size={24} style={{ margin: '0 auto' }} />
+                  <span>Pilih Galeri</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={onFileChange}
+                    disabled={isSubmitting}
+                  />
+                </label>
+              </div>
+            )}
 
             {attachments.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>

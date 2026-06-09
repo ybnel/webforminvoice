@@ -26,6 +26,10 @@ function App() {
   };
 
   const handleOpenScanner = () => {
+    if (attachments.length >= 15) {
+      alert("Batas maksimal 15 lampiran struk telah tercapai. Harap kirim pengajuan ini terlebih dahulu atau hapus lampiran yang tidak diperlukan.");
+      return;
+    }
     setEditAttachment(null);
     setUploadQueue([]);
     setIsScannerOpen(true);
@@ -35,6 +39,12 @@ function App() {
     const files = Array.from(e.target.files);
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     if (imageFiles.length === 0) return;
+
+    if (attachments.length + imageFiles.length > 15) {
+      alert(`Maksimal berkas struk yang dapat dilampirkan adalah 15. Anda mencoba menambahkan ${imageFiles.length} foto, sedangkan lampiran saat ini sudah ada ${attachments.length} foto.`);
+      e.target.value = '';
+      return;
+    }
 
     setEditAttachment(null);
     setUploadQueue(imageFiles);
@@ -49,6 +59,10 @@ function App() {
   };
 
   const handleSaveScan = (newAttachment) => {
+    if (attachments.length >= 15) {
+      alert("Batas maksimal 15 lampiran telah tercapai. Struk tambahan tidak dapat disimpan.");
+      return;
+    }
     setAttachments(prev => [...prev, { ...newAttachment, category: '' }]);
   };
 
