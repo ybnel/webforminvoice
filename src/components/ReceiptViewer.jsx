@@ -8,6 +8,10 @@ function ReceiptViewer({ documentId, onBack }) {
   const [claim, setClaim] = useState(null);
   const [error, setError] = useState('');
   const [activePhoto, setActivePhoto] = useState(null);
+  const [printCols, setPrintCols] = useState(2);
+  const [printImageSize, setPrintImageSize] = useState('medium'); // 'large', 'medium', 'small', 'hide'
+  const [printPageBreak, setPrintPageBreak] = useState(true);
+  const [showPrintAttachments, setShowPrintAttachments] = useState(true);
 
   // Fetch claim data from Firestore
   useEffect(() => {
@@ -89,6 +93,131 @@ function ReceiptViewer({ documentId, onBack }) {
         <button type="button" className="btn btn-primary" onClick={() => window.print()} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', width: 'auto', marginTop: 0 }}>
           <Printer size={16} /> Cetak Bukti
         </button>
+      </div>
+
+      {/* Print Settings Option Panel - Web View Only */}
+      <div className="no-print" style={{ 
+        background: 'rgba(255, 255, 255, 0.7)', 
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        padding: '1.25rem', 
+        borderRadius: '12px', 
+        border: '1px solid rgba(79, 70, 229, 0.15)', 
+        marginBottom: '2rem', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '1rem',
+        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.05)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+          <Printer size={18} style={{ color: 'var(--primary)' }} />
+          <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-main)' }}>
+            Pengaturan Format Cetak (Hemat Kertas)
+          </h4>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+          {/* Tampilkan / Sembunyikan Lampiran */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>Cetak Lampiran Struk</label>
+            <select 
+              value={showPrintAttachments ? 'show' : 'hide'} 
+              onChange={(e) => setShowPrintAttachments(e.target.value === 'show')}
+              style={{ 
+                padding: '0.6rem 0.75rem', 
+                borderRadius: '8px', 
+                border: '1px solid var(--border)', 
+                background: 'white', 
+                fontSize: '0.85rem',
+                fontFamily: 'inherit',
+                color: 'var(--text-main)',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              <option value="show">Ya (Tampilkan Struk Fisik)</option>
+              <option value="hide">Tidak (Sembunyikan Semua Struk)</option>
+            </select>
+          </div>
+
+          {/* Kolom Lampiran */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>Jumlah Kolom Lampiran</label>
+            <select 
+              value={printCols} 
+              onChange={(e) => setPrintCols(Number(e.target.value))}
+              disabled={!showPrintAttachments}
+              style={{ 
+                padding: '0.6rem 0.75rem', 
+                borderRadius: '8px', 
+                border: '1px solid var(--border)', 
+                background: 'white', 
+                fontSize: '0.85rem',
+                fontFamily: 'inherit',
+                color: 'var(--text-main)',
+                cursor: showPrintAttachments ? 'pointer' : 'not-allowed',
+                outline: 'none'
+              }}
+            >
+              <option value={2}>2 Kolom (Default)</option>
+              <option value={3}>3 Kolom (Lebih Hemat Kertas)</option>
+              <option value={4}>4 Kolom (Sangat Hemat Kertas)</option>
+            </select>
+          </div>
+
+          {/* Ukuran Gambar Lampiran */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>Ukuran Gambar Struk</label>
+            <select 
+              value={printImageSize} 
+              onChange={(e) => setPrintImageSize(e.target.value)}
+              disabled={!showPrintAttachments}
+              style={{ 
+                padding: '0.6rem 0.75rem', 
+                borderRadius: '8px', 
+                border: '1px solid var(--border)', 
+                background: 'white', 
+                fontSize: '0.85rem',
+                fontFamily: 'inherit',
+                color: 'var(--text-main)',
+                cursor: showPrintAttachments ? 'pointer' : 'not-allowed',
+                outline: 'none'
+              }}
+            >
+              <option value="large">Besar (Maks 210px)</option>
+              <option value="medium">Sedang (Maks 140px)</option>
+              <option value="small">Kecil (Maks 90px)</option>
+              <option value="hide">Sembunyikan Gambar (Hanya Teks)</option>
+            </select>
+          </div>
+
+          {/* Pemisah Halaman Baru */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>Letak Lampiran Struk</label>
+            <select 
+              value={printPageBreak ? 'always' : 'auto'} 
+              onChange={(e) => setPrintPageBreak(e.target.value === 'always')}
+              disabled={!showPrintAttachments}
+              style={{ 
+                padding: '0.6rem 0.75rem', 
+                borderRadius: '8px', 
+                border: '1px solid var(--border)', 
+                background: 'white', 
+                fontSize: '0.85rem',
+                fontFamily: 'inherit',
+                color: 'var(--text-main)',
+                cursor: showPrintAttachments ? 'pointer' : 'not-allowed',
+                outline: 'none'
+              }}
+            >
+              <option value="always">Mulai di Halaman Baru</option>
+              <option value="auto">Gabung Langsung di Bawah Ringkasan</option>
+            </select>
+          </div>
+        </div>
+
+        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          💡 <strong>Tips:</strong> Pilih 3/4 kolom dengan ukuran gambar sedang/kecil untuk menghemat hingga 80% kertas cetakan.
+        </p>
       </div>
 
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
@@ -229,34 +358,70 @@ function ReceiptViewer({ documentId, onBack }) {
       </div>
 
       {/* Print-Only Receipts Attachments Section (Visible ONLY in printed PDF/paper) */}
-      <div className="only-print" style={{ marginTop: '3rem', pageBreakBefore: 'always' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1.5rem', borderBottom: '1px solid black', paddingBottom: '0.5rem' }}>
-          Lampiran Bukti Struk Kuitansi
-        </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-          {claim.attachments && claim.attachments.map((att, idx) => (
-            <div key={idx} style={{ pageBreakInside: 'avoid', borderBottom: '1px dashed #ccc', paddingBottom: '2rem' }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
-                <span>{idx + 1}. Kategori: {att.category || 'Lainnya'}</span>
-                <span>Nominal: Rp {(att.amount || 0).toLocaleString('id-ID')}</span>
-              </h4>
-              <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', marginBottom: '1rem', color: '#475569' }}>
-                {att.invoiceNumber && <div><strong>No. Invoice:</strong> {att.invoiceNumber}</div>}
-                {att.invoiceDate && <div><strong>Tanggal Struk:</strong> {att.invoiceDate}</div>}
-              </div>
-              {att.url && (
-                <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-                  <img
-                    src={att.url}
-                    alt={att.name}
-                    style={{ maxWidth: '100%', maxHeight: '480px', objectFit: 'contain', border: '1px solid #ccc', padding: '4px', borderRadius: '4px' }}
-                  />
+      {showPrintAttachments && (
+        <div className="only-print" style={{ 
+          marginTop: printPageBreak ? '3rem' : '1.5rem', 
+          pageBreakBefore: printPageBreak ? 'always' : 'auto',
+          breakBefore: printPageBreak ? 'page' : 'auto',
+          borderTop: printPageBreak ? 'none' : '1px dashed #ccc',
+          paddingTop: printPageBreak ? '0' : '1.5rem'
+        }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1.5rem', borderBottom: '1px solid black', paddingBottom: '0.5rem' }}>
+            Lampiran Bukti Struk Kuitansi
+          </h3>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: `repeat(${printCols}, 1fr)`, 
+            gap: '1rem' 
+          }}>
+            {claim.attachments && claim.attachments.map((att, idx) => (
+              <div key={idx} style={{ 
+                pageBreakInside: 'avoid', 
+                breakInside: 'avoid', 
+                border: '1px solid #ccc', 
+                padding: printImageSize === 'small' || printImageSize === 'hide' ? '0.5rem' : '0.85rem', 
+                borderRadius: '8px', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '0.35rem', 
+                background: 'white' 
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee', paddingBottom: '0.35rem', fontSize: '0.8rem', fontWeight: '700' }}>
+                  <span>{idx + 1}. {att.category || 'Lainnya'}</span>
+                  <span style={{ color: 'var(--primary)' }}>Rp {(att.amount || 0).toLocaleString('id-ID')}</span>
                 </div>
-              )}
-            </div>
-          ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#475569' }}>
+                  <div>No: {att.invoiceNumber || '-'}</div>
+                  <div>Tgl: {att.invoiceDate || '-'}</div>
+                </div>
+                {printImageSize !== 'hide' && att.url && (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    marginTop: '0.25rem', 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    height: printImageSize === 'large' ? '220px' : printImageSize === 'medium' ? '150px' : '100px', 
+                    background: '#f8fafc', 
+                    borderRadius: '4px', 
+                    border: '1px solid #eee' 
+                  }}>
+                    <img
+                      src={att.url}
+                      alt={att.name}
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: printImageSize === 'large' ? '210px' : printImageSize === 'medium' ? '140px' : '90px', 
+                        objectFit: 'contain' 
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Lightbox Modal Popup (Web only, overlayed) */}
       {activePhoto && (

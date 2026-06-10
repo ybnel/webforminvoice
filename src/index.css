@@ -628,11 +628,14 @@ input[type="number"].no-spin {
     max-height: 55vh;
   }
 }
-
 @media print {
+  @page {
+    margin: 0; /* Menghilangkan default header & footer dari browser (URL, tanggal, dll.) */
+  }
   body {
     background: white !important;
     padding: 0 !important;
+    margin: 1.6cm !important; /* Memberikan margin di kertas agar tidak terlalu mepet ke pinggir */
     color: black !important;
   }
   .form-container {
