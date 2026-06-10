@@ -12,6 +12,7 @@ function ReceiptViewer({ documentId, onBack }) {
   const [printImageSize, setPrintImageSize] = useState('medium'); // 'large', 'medium', 'small', 'hide'
   const [printPageBreak, setPrintPageBreak] = useState(true);
   const [showPrintAttachments, setShowPrintAttachments] = useState(true);
+  const [showPrintSettingsModal, setShowPrintSettingsModal] = useState(false);
 
   // Fetch claim data from Firestore
   useEffect(() => {
@@ -90,135 +91,162 @@ function ReceiptViewer({ documentId, onBack }) {
         <button type="button" className="btn btn-secondary" onClick={onBack} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
           <ArrowLeft size={16} /> Buat Klaim Baru
         </button>
-        <button type="button" className="btn btn-primary" onClick={() => window.print()} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', width: 'auto', marginTop: 0 }}>
+        <button type="button" className="btn btn-primary" onClick={() => setShowPrintSettingsModal(true)} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', width: 'auto', marginTop: 0 }}>
           <Printer size={16} /> Cetak Bukti
         </button>
       </div>
 
-      {/* Print Settings Option Panel - Web View Only */}
-      <div className="no-print" style={{ 
-        background: 'rgba(255, 255, 255, 0.7)', 
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        padding: '1.25rem', 
-        borderRadius: '12px', 
-        border: '1px solid rgba(79, 70, 229, 0.15)', 
-        marginBottom: '2rem', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: '1rem',
-        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.05)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-          <Printer size={18} style={{ color: 'var(--primary)' }} />
-          <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-main)' }}>
-            Pengaturan Format Cetak (Hemat Kertas)
-          </h4>
+      {/* Print Settings Modal - Web View Only */}
+      {showPrintSettingsModal && (
+        <div className="receipt-modal-overlay no-print" onClick={() => setShowPrintSettingsModal(false)}>
+          <div className="receipt-modal-content" style={{ maxWidth: '540px', gap: '1.25rem' }} onClick={(e) => e.stopPropagation()}>
+            <div className="receipt-modal-header" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Printer size={20} style={{ color: 'var(--primary)' }} />
+                <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                  Opsi Format Cetak (Hemat Kertas)
+                </h4>
+              </div>
+              <button className="receipt-modal-close-btn" onClick={() => setShowPrintSettingsModal(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>
+                <X size={18} style={{ color: 'var(--text-main)' }} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Tampilkan / Sembunyikan Lampiran */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Cetak Lampiran Struk</label>
+                <select 
+                  value={showPrintAttachments ? 'show' : 'hide'} 
+                  onChange={(e) => setShowPrintAttachments(e.target.value === 'show')}
+                  style={{ 
+                    padding: '0.65rem 0.75rem', 
+                    borderRadius: '8px', 
+                    border: '1px solid var(--border)', 
+                    background: 'white', 
+                    fontSize: '0.9rem',
+                    fontFamily: 'inherit',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    width: '100%'
+                  }}
+                >
+                  <option value="show">Ya (Tampilkan Gambar/Teks Struk)</option>
+                  <option value="hide">Tidak (Sembunyikan Semua Struk)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                {/* Kolom Lampiran */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Jumlah Kolom</label>
+                  <select 
+                    value={printCols} 
+                    onChange={(e) => setPrintCols(Number(e.target.value))}
+                    disabled={!showPrintAttachments}
+                    style={{ 
+                      padding: '0.65rem 0.75rem', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--border)', 
+                      background: 'white', 
+                      fontSize: '0.9rem',
+                      fontFamily: 'inherit',
+                      color: 'var(--text-main)',
+                      cursor: showPrintAttachments ? 'pointer' : 'not-allowed',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value={2}>2 Kolom</option>
+                    <option value={3}>3 Kolom (Hemat)</option>
+                    <option value={4}>4 Kolom (Sangat Hemat)</option>
+                  </select>
+                </div>
+
+                {/* Ukuran Gambar Lampiran */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Ukuran Gambar</label>
+                  <select 
+                    value={printImageSize} 
+                    onChange={(e) => setPrintImageSize(e.target.value)}
+                    disabled={!showPrintAttachments}
+                    style={{ 
+                      padding: '0.65rem 0.75rem', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--border)', 
+                      background: 'white', 
+                      fontSize: '0.9rem',
+                      fontFamily: 'inherit',
+                      color: 'var(--text-main)',
+                      cursor: showPrintAttachments ? 'pointer' : 'not-allowed',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="large">Besar (210px)</option>
+                    <option value="medium">Sedang (140px)</option>
+                    <option value="small">Kecil (90px)</option>
+                    <option value="hide">Hanya Info Teks</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Pemisah Halaman Baru */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Letak Lampiran Struk</label>
+                <select 
+                  value={printPageBreak ? 'always' : 'auto'} 
+                  onChange={(e) => setPrintPageBreak(e.target.value === 'always')}
+                  disabled={!showPrintAttachments}
+                  style={{ 
+                    padding: '0.65rem 0.75rem', 
+                    borderRadius: '8px', 
+                    border: '1px solid var(--border)', 
+                    background: 'white', 
+                    fontSize: '0.9rem',
+                    fontFamily: 'inherit',
+                    color: 'var(--text-main)',
+                    cursor: showPrintAttachments ? 'pointer' : 'not-allowed',
+                    outline: 'none',
+                    width: '100%'
+                  }}
+                >
+                  <option value="always">Mulai di Halaman Baru</option>
+                  <option value="auto">Gabung Langsung di Bawah Ringkasan</option>
+                </select>
+              </div>
+            </div>
+
+            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', background: '#f8fafc', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              💡 <strong>Tips:</strong> Pilih 3/4 kolom dengan gambar sedang/kecil untuk menghemat hingga 80% kertas.
+            </p>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                onClick={() => setShowPrintSettingsModal(false)}
+                style={{ flex: 1, padding: '0.65rem', margin: 0, fontSize: '0.95rem' }}
+              >
+                Batal
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                onClick={() => {
+                  setShowPrintSettingsModal(false);
+                  setTimeout(() => {
+                    window.print();
+                  }, 250);
+                }}
+                style={{ flex: 1.5, padding: '0.65rem', margin: 0, fontSize: '0.95rem', background: 'var(--primary)', color: 'white', width: 'auto', marginTop: 0 }}
+              >
+                Cetak Sekarang
+              </button>
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-          {/* Tampilkan / Sembunyikan Lampiran */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>Cetak Lampiran Struk</label>
-            <select 
-              value={showPrintAttachments ? 'show' : 'hide'} 
-              onChange={(e) => setShowPrintAttachments(e.target.value === 'show')}
-              style={{ 
-                padding: '0.6rem 0.75rem', 
-                borderRadius: '8px', 
-                border: '1px solid var(--border)', 
-                background: 'white', 
-                fontSize: '0.85rem',
-                fontFamily: 'inherit',
-                color: 'var(--text-main)',
-                cursor: 'pointer',
-                outline: 'none'
-              }}
-            >
-              <option value="show">Ya (Tampilkan Struk Fisik)</option>
-              <option value="hide">Tidak (Sembunyikan Semua Struk)</option>
-            </select>
-          </div>
-
-          {/* Kolom Lampiran */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>Jumlah Kolom Lampiran</label>
-            <select 
-              value={printCols} 
-              onChange={(e) => setPrintCols(Number(e.target.value))}
-              disabled={!showPrintAttachments}
-              style={{ 
-                padding: '0.6rem 0.75rem', 
-                borderRadius: '8px', 
-                border: '1px solid var(--border)', 
-                background: 'white', 
-                fontSize: '0.85rem',
-                fontFamily: 'inherit',
-                color: 'var(--text-main)',
-                cursor: showPrintAttachments ? 'pointer' : 'not-allowed',
-                outline: 'none'
-              }}
-            >
-              <option value={2}>2 Kolom (Default)</option>
-              <option value={3}>3 Kolom (Lebih Hemat Kertas)</option>
-              <option value={4}>4 Kolom (Sangat Hemat Kertas)</option>
-            </select>
-          </div>
-
-          {/* Ukuran Gambar Lampiran */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>Ukuran Gambar Struk</label>
-            <select 
-              value={printImageSize} 
-              onChange={(e) => setPrintImageSize(e.target.value)}
-              disabled={!showPrintAttachments}
-              style={{ 
-                padding: '0.6rem 0.75rem', 
-                borderRadius: '8px', 
-                border: '1px solid var(--border)', 
-                background: 'white', 
-                fontSize: '0.85rem',
-                fontFamily: 'inherit',
-                color: 'var(--text-main)',
-                cursor: showPrintAttachments ? 'pointer' : 'not-allowed',
-                outline: 'none'
-              }}
-            >
-              <option value="large">Besar (Maks 210px)</option>
-              <option value="medium">Sedang (Maks 140px)</option>
-              <option value="small">Kecil (Maks 90px)</option>
-              <option value="hide">Sembunyikan Gambar (Hanya Teks)</option>
-            </select>
-          </div>
-
-          {/* Pemisah Halaman Baru */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>Letak Lampiran Struk</label>
-            <select 
-              value={printPageBreak ? 'always' : 'auto'} 
-              onChange={(e) => setPrintPageBreak(e.target.value === 'always')}
-              disabled={!showPrintAttachments}
-              style={{ 
-                padding: '0.6rem 0.75rem', 
-                borderRadius: '8px', 
-                border: '1px solid var(--border)', 
-                background: 'white', 
-                fontSize: '0.85rem',
-                fontFamily: 'inherit',
-                color: 'var(--text-main)',
-                cursor: showPrintAttachments ? 'pointer' : 'not-allowed',
-                outline: 'none'
-              }}
-            >
-              <option value="always">Mulai di Halaman Baru</option>
-              <option value="auto">Gabung Langsung di Bawah Ringkasan</option>
-            </select>
-          </div>
-        </div>
-
-        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          💡 <strong>Tips:</strong> Pilih 3/4 kolom dengan ukuran gambar sedang/kecil untuk menghemat hingga 80% kertas cetakan.
-        </p>
-      </div>
+      )}
 
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
         <h1 style={{ color: 'var(--primary)', fontSize: '1.8rem', fontWeight: '700', marginBottom: '0.5rem' }}>Bukti Klaim Reimbursement</h1>
