@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { FileText, Loader2, User, Phone, Mail, Calendar, Banknote, ArrowLeft, Printer, X } from 'lucide-react';
@@ -97,7 +98,7 @@ function ReceiptViewer({ documentId, onBack }) {
       </div>
 
       {/* Print Settings Modal - Web View Only */}
-      {showPrintSettingsModal && (
+      {showPrintSettingsModal && createPortal(
         <div className="receipt-modal-overlay no-print" onClick={() => setShowPrintSettingsModal(false)}>
           <div className="receipt-modal-content" style={{ maxWidth: '540px', gap: '1.25rem' }} onClick={(e) => e.stopPropagation()}>
             <div className="receipt-modal-header" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
@@ -245,7 +246,8 @@ function ReceiptViewer({ documentId, onBack }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
@@ -452,7 +454,7 @@ function ReceiptViewer({ documentId, onBack }) {
       )}
 
       {/* Lightbox Modal Popup (Web only, overlayed) */}
-      {activePhoto && (
+      {activePhoto && createPortal(
         <div className="receipt-modal-overlay no-print" onClick={() => setActivePhoto(null)}>
           <div className="receipt-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="receipt-modal-header">
@@ -484,7 +486,8 @@ function ReceiptViewer({ documentId, onBack }) {
               />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
