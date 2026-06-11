@@ -649,6 +649,25 @@ input[type="number"].no-spin {
   .no-print {
     display: none !important;
   }
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .grand-total-card {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    color: #0f172a !important;
+  }
+  .grand-total-label {
+    color: #475569 !important;
+  }
+  .grand-total-amount {
+    color: #0f172a !important;
+  }
+  .grand-total-count {
+    color: #64748b !important;
+  }
 }
 
 .receipt-viewer-print {

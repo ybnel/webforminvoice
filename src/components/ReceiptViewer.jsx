@@ -217,9 +217,6 @@ function ReceiptViewer({ documentId, onBack }) {
               </div>
             </div>
 
-            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', background: '#f8fafc', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              💡 <strong>Tips:</strong> Pilih 3/4 kolom dengan gambar sedang/kecil untuk menghemat hingga 80% kertas.
-            </p>
 
             {/* Modal Actions */}
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
@@ -358,7 +355,7 @@ function ReceiptViewer({ documentId, onBack }) {
       </div>
 
       {/* Summary Box */}
-      <div style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '2.5rem' }}>
+      <div style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '2.5rem', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
         <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
           <Banknote size={18} style={{ color: 'var(--primary)' }} /> Ringkasan per Kategori (Summary)
         </h3>
@@ -375,12 +372,12 @@ function ReceiptViewer({ documentId, onBack }) {
             </div>
           ))}
           {/* Grand Total Card */}
-          <div style={{ background: 'var(--primary)', color: 'white', padding: '1rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '0.25rem', boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.1), 0 2px 4px -1px rgba(79, 70, 229, 0.06)' }}>
-            <span style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.8)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Grand Total</span>
-            <span style={{ fontSize: '1.2rem', fontWeight: '800' }}>
+          <div className="grand-total-card" style={{ background: 'var(--primary)', color: 'white', padding: '1rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '0.25rem', boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.1), 0 2px 4px -1px rgba(79, 70, 229, 0.06)' }}>
+            <span className="grand-total-label" style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.8)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Grand Total</span>
+            <span className="grand-total-amount" style={{ fontSize: '1.2rem', fontWeight: '800' }}>
               Rp {claim.totalAmount.toLocaleString('id-ID')}
             </span>
-            <span style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.8)' }}>
+            <span className="grand-total-count" style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.8)' }}>
               Total {claim.attachments ? claim.attachments.length : 0} Struk
             </span>
           </div>
