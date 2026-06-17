@@ -281,9 +281,31 @@ function ReceiptViewer({ documentId, onBack }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <Calendar size={14} style={{ color: 'var(--text-muted)' }} /> <strong>Tanggal Perjalanan:</strong> &nbsp;{claim.tripDate || claim.invoiceDate}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: '700', fontSize: '1rem', marginTop: '0.25rem' }}>
-              <Banknote size={16} /> Rp {claim.totalAmount.toLocaleString('id-ID')}
-            </div>
+            {claim.allowance !== undefined ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Banknote size={14} style={{ color: 'var(--text-muted)' }} /> <strong>Uang Saku:</strong> &nbsp;Rp {claim.allowance.toLocaleString('id-ID')}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Banknote size={14} style={{ color: 'var(--text-muted)' }} /> <strong>Total Pengeluaran:</strong> &nbsp;Rp {claim.totalAmount.toLocaleString('id-ID')}
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.35rem', 
+                  color: claim.remainingAllowance < 0 ? 'var(--danger)' : 'var(--primary)', 
+                  fontWeight: '700', 
+                  fontSize: '1rem', 
+                  marginTop: '0.25rem' 
+                }}>
+                  <Banknote size={16} /> <strong>Sisa Uang Saku:</strong> &nbsp;Rp {claim.remainingAllowance.toLocaleString('id-ID')}
+                </div>
+              </>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: '700', fontSize: '1rem', marginTop: '0.25rem' }}>
+                <Banknote size={16} /> Rp {claim.totalAmount.toLocaleString('id-ID')}
+              </div>
+            )}
           </div>
         </div>
       </div>

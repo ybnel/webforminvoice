@@ -24,9 +24,12 @@ function InvoiceForm({
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState('');
+  const [allowance, setAllowance] = useState('');
 
   // Calculate total amount automatically
   const totalAmount = attachments.reduce((sum, att) => sum + (parseFloat(att.amount) || 0), 0);
+  const parsedAllowance = parseFloat(allowance) || 0;
+  const remainingAllowance = parsedAllowance - totalAmount;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,6 +90,8 @@ function InvoiceForm({
         phone: data.phone,
         tripPurpose: data.tripPurpose,
         tripDate: data.tripDate,
+        allowance: parsedAllowance,
+        remainingAllowance: remainingAllowance,
         totalAmount: totalAmount,
         attachments: uploadedFiles,
         createdAt: new Date()
@@ -112,6 +117,8 @@ function InvoiceForm({
               tripPurpose: data.tripPurpose,
               invoiceNumber: attachments.map(att => att.invoiceNumber).join(', '), // Combined
               invoiceDate: data.tripDate, // Tanggal Perjalanan mapped to Date column
+              allowance: parsedAllowance,
+              remainingAllowance: remainingAllowance,
               totalAmount: totalAmount,
               // We pass the portal link as the url so it logs in Google Sheets
               attachments: [{ 
@@ -127,12 +134,13 @@ function InvoiceForm({
 
       alert(
         'Klaim reimbursement berhasil dikirim!\n' +
-        `Total: Rp ${totalAmount.toLocaleString('id-ID')}\n` +
+        `Sisa Uang Saku: Rp ${remainingAllowance.toLocaleString('id-ID')}\n` +
         `Data tersimpan di Firestore & Google Sheets.`
       );
 
       // Reset form and attachments
       formElement.reset();
+      setAllowance('');
       onClearAttachments();
 
     } catch (error) {
@@ -202,21 +210,40 @@ function InvoiceForm({
         {/* Invoice Info Section */}
         <div className="section">
           <h2 className="section-title"><FileText size={20} /> Detail Pengajuan</h2>
-          <div className="grid-2">
-            <div className="input-group">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+            <div className="input-group" style={{ marginBottom: 0 }}>
               <label htmlFor="tripDate">Tanggal Perjalanan</label>
               <input id="tripDate" name="tripDate" type="date" required disabled={isSubmitting} />
             </div>
-            <div className="input-group">
-              <label htmlFor="totalAmount">Total Nominal (Rp)</label>
+            <div className="input-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="allowance">Uang Saku yang Diberikan (Rp)</label>
               <input
-                id="totalAmount"
-                name="totalAmount"
+                id="allowance"
+                name="allowance"
+                type="number"
+                placeholder="Contoh: 1000000"
+                value={allowance}
+                onChange={(e) => setAllowance(e.target.value)}
+                required
+                disabled={isSubmitting}
+                className="no-spin"
+              />
+            </div>
+            <div className="input-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="remainingAllowance">Sisa Uang Saku (Rp)</label>
+              <input
+                id="remainingAllowance"
+                name="remainingAllowance"
                 type="text"
-                value={`Rp ${totalAmount.toLocaleString('id-ID')}`}
+                value={`Rp ${remainingAllowance.toLocaleString('id-ID')}`}
                 readOnly
                 disabled={isSubmitting}
-                style={{ background: '#f1f5f9', cursor: 'not-allowed', fontWeight: '700', color: 'var(--primary)' }}
+                style={{ 
+                  background: '#f1f5f9', 
+                  cursor: 'not-allowed', 
+                  fontWeight: '700', 
+                  color: remainingAllowance < 0 ? 'var(--danger)' : 'var(--primary)' 
+                }}
               />
             </div>
           </div>
