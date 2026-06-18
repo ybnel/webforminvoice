@@ -630,12 +630,12 @@ input[type="number"].no-spin {
 }
 @media print {
   @page {
-    margin: 1.5cm; /* Memberikan margin fisik secara konsisten di semua halaman (halaman 1, 2, dst.) */
+    margin: 0; /* Memaksa menghilangkan header & footer bawaan browser */
   }
   body {
     background: white !important;
     padding: 0 !important;
-    margin: 0 !important; /* Menggunakan margin @page asli agar tidak bug di halaman berikutnya */
+    margin: 1.6cm !important; /* Memberikan batas margin fisik dari konten agar tetap rapi */
     color: black !important;
   }
   .form-container {
