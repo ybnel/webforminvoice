@@ -668,6 +668,30 @@ input[type="number"].no-spin {
   .grand-total-count {
     color: #64748b !important;
   }
+  .sisa-allowance-card.under-budget {
+    background: #ecfdf5 !important;
+    border: 1px solid #a7f3d0 !important;
+    box-shadow: none !important;
+    color: #065f46 !important;
+  }
+  .sisa-allowance-card.under-budget .sisa-allowance-label {
+    color: #047857 !important;
+  }
+  .sisa-allowance-card.under-budget .sisa-allowance-count {
+    color: #059669 !important;
+  }
+  .sisa-allowance-card.over-budget {
+    background: #fef2f2 !important;
+    border: 1px solid #fecaca !important;
+    box-shadow: none !important;
+    color: #991b1b !important;
+  }
+  .sisa-allowance-card.over-budget .sisa-allowance-label {
+    color: #b91c1c !important;
+  }
+  .sisa-allowance-card.over-budget .sisa-allowance-count {
+    color: #dc2626 !important;
+  }
 }
 
 .receipt-viewer-print {

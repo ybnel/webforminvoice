@@ -403,6 +403,29 @@ function ReceiptViewer({ documentId, onBack }) {
               Total {claim.attachments ? claim.attachments.length : 0} Struk
             </span>
           </div>
+          {/* Sisa Uang Saku Card */}
+          {claim.allowance !== undefined && (
+            <div className={`sisa-allowance-card ${claim.remainingAllowance < 0 ? 'over-budget' : 'under-budget'}`} style={{ 
+              background: claim.remainingAllowance < 0 ? '#ef4444' : '#10b981', 
+              color: 'white', 
+              padding: '1rem', 
+              borderRadius: '10px', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '0.25rem', 
+              boxShadow: claim.remainingAllowance < 0 ? '0 4px 6px -1px rgba(239, 68, 68, 0.1), 0 2px 4px -1px rgba(239, 68, 68, 0.06)' : '0 4px 6px -1px rgba(16, 185, 129, 0.1), 0 2px 4px -1px rgba(16, 185, 129, 0.06)'
+            }}>
+              <span className="sisa-allowance-label" style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {claim.remainingAllowance < 0 ? 'Kurang Bayar (Reimburse)' : 'Sisa Uang Saku (Refund)'}
+              </span>
+              <span className="sisa-allowance-amount" style={{ fontSize: '1.2rem', fontWeight: '800' }}>
+                Rp {Math.abs(claim.remainingAllowance).toLocaleString('id-ID')}
+              </span>
+              <span className="sisa-allowance-count" style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.9)' }}>
+                {claim.remainingAllowance < 0 ? 'Harus dibayar ke karyawan' : 'Harus dikembalikan ke perusahaan'}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
