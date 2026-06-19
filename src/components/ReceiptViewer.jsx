@@ -469,22 +469,24 @@ function ReceiptViewer({ documentId, onBack }) {
                 {printImageSize !== 'hide' && att.url && (
                   <div style={{ 
                     textAlign: 'center', 
-                    marginTop: '0.25rem', 
+                    marginTop: '0.35rem', 
                     display: 'flex', 
                     justifyContent: 'center', 
                     alignItems: 'center', 
-                    height: printImageSize === 'large' ? '220px' : printImageSize === 'medium' ? '150px' : '100px', 
                     background: '#f8fafc', 
                     borderRadius: '4px', 
-                    border: '1px solid #eee' 
+                    border: '1px solid #eee',
+                    overflow: 'hidden'
                   }}>
                     <img
                       src={att.url}
                       alt={att.name}
                       style={{ 
-                        maxWidth: '100%', 
-                        maxHeight: printImageSize === 'large' ? '210px' : printImageSize === 'medium' ? '140px' : '90px', 
-                        objectFit: 'contain' 
+                        width: '100%', 
+                        height: 'auto', 
+                        maxHeight: printImageSize === 'large' ? '320px' : printImageSize === 'medium' ? '220px' : '130px', 
+                        objectFit: 'contain',
+                        display: 'block'
                       }}
                     />
                   </div>
