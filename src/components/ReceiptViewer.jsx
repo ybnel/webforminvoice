@@ -10,10 +10,10 @@ function ReceiptViewer({ documentId, onBack }) {
   const [error, setError] = useState('');
   const [activePhoto, setActivePhoto] = useState(null);
   const [printCols, setPrintCols] = useState(2);
-  const [printImageSize, setPrintImageSize] = useState('medium'); // 'large', 'medium', 'small', 'hide'
   const [printPageBreak, setPrintPageBreak] = useState(true);
   const [showPrintAttachments, setShowPrintAttachments] = useState(true);
   const [showPrintSettingsModal, setShowPrintSettingsModal] = useState(false);
+  const [printSummaryPageBreak, setPrintSummaryPageBreak] = useState(false);
 
   // Fetch claim data from Firestore
   useEffect(() => {
@@ -138,57 +138,54 @@ function ReceiptViewer({ documentId, onBack }) {
                 </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                {/* Kolom Lampiran */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Jumlah Kolom</label>
-                  <select 
-                    value={printCols} 
-                    onChange={(e) => setPrintCols(Number(e.target.value))}
-                    disabled={!showPrintAttachments}
-                    style={{ 
-                      padding: '0.65rem 0.75rem', 
-                      borderRadius: '8px', 
-                      border: '1px solid var(--border)', 
-                      background: 'white', 
-                      fontSize: '0.9rem',
-                      fontFamily: 'inherit',
-                      color: 'var(--text-main)',
-                      cursor: showPrintAttachments ? 'pointer' : 'not-allowed',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value={2}>2 Kolom</option>
-                    <option value={3}>3 Kolom (Hemat)</option>
-                    <option value={4}>4 Kolom (Sangat Hemat)</option>
-                  </select>
-                </div>
+              {/* Kolom Lampiran */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Jumlah Kolom</label>
+                <select 
+                  value={printCols} 
+                  onChange={(e) => setPrintCols(Number(e.target.value))}
+                  disabled={!showPrintAttachments}
+                  style={{ 
+                    padding: '0.65rem 0.75rem', 
+                    borderRadius: '8px', 
+                    border: '1px solid var(--border)', 
+                    background: 'white', 
+                    fontSize: '0.9rem',
+                    fontFamily: 'inherit',
+                    color: 'var(--text-main)',
+                    cursor: showPrintAttachments ? 'pointer' : 'not-allowed',
+                    outline: 'none',
+                    width: '100%'
+                  }}
+                >
+                  <option value={2}>2 Kolom</option>
+                  <option value={3}>3 Kolom (Hemat)</option>
+                  <option value={4}>4 Kolom (Sangat Hemat)</option>
+                </select>
+              </div>
 
-                {/* Ukuran Gambar Lampiran */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Ukuran Gambar</label>
-                  <select 
-                    value={printImageSize} 
-                    onChange={(e) => setPrintImageSize(e.target.value)}
-                    disabled={!showPrintAttachments}
-                    style={{ 
-                      padding: '0.65rem 0.75rem', 
-                      borderRadius: '8px', 
-                      border: '1px solid var(--border)', 
-                      background: 'white', 
-                      fontSize: '0.9rem',
-                      fontFamily: 'inherit',
-                      color: 'var(--text-main)',
-                      cursor: showPrintAttachments ? 'pointer' : 'not-allowed',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="large">Besar (210px)</option>
-                    <option value="medium">Sedang (140px)</option>
-                    <option value="small">Kecil (90px)</option>
-                    <option value="hide">Hanya Info Teks</option>
-                  </select>
-                </div>
+              {/* Pemisah Halaman Ringkasan (Summary) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Letak Ringkasan (Summary)</label>
+                <select 
+                  value={printSummaryPageBreak ? 'always' : 'auto'} 
+                  onChange={(e) => setPrintSummaryPageBreak(e.target.value === 'always')}
+                  style={{ 
+                    padding: '0.65rem 0.75rem', 
+                    borderRadius: '8px', 
+                    border: '1px solid var(--border)', 
+                    background: 'white', 
+                    fontSize: '0.9rem',
+                    fontFamily: 'inherit',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    width: '100%'
+                  }}
+                >
+                  <option value="always">Mulai di Halaman Baru</option>
+                  <option value="auto">Gabung Langsung di Bawah Tabel</option>
+                </select>
               </div>
 
               {/* Pemisah Halaman Baru */}
@@ -377,7 +374,17 @@ function ReceiptViewer({ documentId, onBack }) {
       </div>
 
       {/* Summary Box */}
-      <div style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '2.5rem', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+      <div style={{ 
+        background: 'white', 
+        padding: '1.25rem', 
+        borderRadius: '12px', 
+        border: '1px solid var(--border)', 
+        marginBottom: '2.5rem', 
+        pageBreakInside: 'avoid', 
+        breakInside: 'avoid',
+        pageBreakBefore: printSummaryPageBreak ? 'always' : 'auto',
+        breakBefore: printSummaryPageBreak ? 'page' : 'auto'
+      }}>
         <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
           <Banknote size={18} style={{ color: 'var(--primary)' }} /> Ringkasan per Kategori (Summary)
         </h3>
@@ -451,7 +458,7 @@ function ReceiptViewer({ documentId, onBack }) {
                 pageBreakInside: 'avoid', 
                 breakInside: 'avoid', 
                 border: '1px solid #ccc', 
-                padding: printImageSize === 'small' || printImageSize === 'hide' ? '0.5rem' : '0.85rem', 
+                padding: '0.85rem', 
                 borderRadius: '8px', 
                 display: 'flex', 
                 flexDirection: 'column', 
@@ -466,7 +473,7 @@ function ReceiptViewer({ documentId, onBack }) {
                   <div>No: {att.invoiceNumber || '-'}</div>
                   <div>Tgl: {att.invoiceDate || '-'}</div>
                 </div>
-                {printImageSize !== 'hide' && att.url && (
+                {att.url && (
                   <div style={{ 
                     textAlign: 'center', 
                     marginTop: '0.35rem', 
@@ -484,7 +491,7 @@ function ReceiptViewer({ documentId, onBack }) {
                       style={{ 
                         width: '100%', 
                         height: 'auto', 
-                        maxHeight: printImageSize === 'large' ? '320px' : printImageSize === 'medium' ? '220px' : '130px', 
+                        maxHeight: '210px', 
                         objectFit: 'contain',
                         display: 'block'
                       }}
