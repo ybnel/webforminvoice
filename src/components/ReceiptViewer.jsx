@@ -13,7 +13,6 @@ function ReceiptViewer({ documentId, onBack }) {
   const [printPageBreak, setPrintPageBreak] = useState(true);
   const [showPrintAttachments, setShowPrintAttachments] = useState(true);
   const [showPrintSettingsModal, setShowPrintSettingsModal] = useState(false);
-  const [printSummaryPageBreak, setPrintSummaryPageBreak] = useState(false);
 
   // Fetch claim data from Firestore
   useEffect(() => {
@@ -164,29 +163,7 @@ function ReceiptViewer({ documentId, onBack }) {
                 </select>
               </div>
 
-              {/* Pemisah Halaman Ringkasan (Summary) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Letak Ringkasan (Summary)</label>
-                <select 
-                  value={printSummaryPageBreak ? 'always' : 'auto'} 
-                  onChange={(e) => setPrintSummaryPageBreak(e.target.value === 'always')}
-                  style={{ 
-                    padding: '0.65rem 0.75rem', 
-                    borderRadius: '8px', 
-                    border: '1px solid var(--border)', 
-                    background: 'white', 
-                    fontSize: '0.9rem',
-                    fontFamily: 'inherit',
-                    color: 'var(--text-main)',
-                    cursor: 'pointer',
-                    outline: 'none',
-                    width: '100%'
-                  }}
-                >
-                  <option value="always">Mulai di Halaman Baru</option>
-                  <option value="auto">Gabung Langsung di Bawah Tabel</option>
-                </select>
-              </div>
+
 
               {/* Pemisah Halaman Baru */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', opacity: showPrintAttachments ? 1 : 0.5 }}>
@@ -374,7 +351,7 @@ function ReceiptViewer({ documentId, onBack }) {
       </div>
 
       {/* Summary Box */}
-      <div style={{ 
+      <div className="summary-box-container" style={{ 
         background: 'white', 
         padding: '1.25rem', 
         borderRadius: '12px', 
@@ -382,8 +359,8 @@ function ReceiptViewer({ documentId, onBack }) {
         marginBottom: '2.5rem', 
         pageBreakInside: 'avoid', 
         breakInside: 'avoid',
-        pageBreakBefore: printSummaryPageBreak ? 'always' : 'auto',
-        breakBefore: printSummaryPageBreak ? 'page' : 'auto'
+        pageBreakBefore: 'always',
+        breakBefore: 'page'
       }}>
         <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
           <Banknote size={18} style={{ color: 'var(--primary)' }} /> Ringkasan per Kategori (Summary)

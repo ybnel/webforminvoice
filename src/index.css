@@ -693,6 +693,12 @@ input[type="number"].no-spin {
   .sisa-allowance-card.over-budget .sisa-allowance-count {
     color: #dc2626 !important;
   }
+  .summary-box-container {
+    margin-top: 1.6cm !important;
+  }
+  .only-print {
+    margin-top: 1.6cm !important;
+  }
 }
 
 .receipt-viewer-print {
