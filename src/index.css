@@ -637,6 +637,7 @@ input[type="number"].no-spin {
     padding: 0 !important;
     margin: 1.6cm !important; /* Memberikan batas margin fisik dari konten agar tetap rapi */
     color: black !important;
+    display: block !important; /* Menonaktifkan flexbox pada mode cetak agar page-break berfungsi */
   }
   .form-container {
     background: transparent !important;
