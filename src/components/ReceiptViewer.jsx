@@ -454,10 +454,6 @@ function ReceiptViewer({ documentId, onBack }) {
                   <div style={{ 
                     textAlign: 'center', 
                     marginTop: '0.35rem', 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    background: '#f8fafc', 
                     borderRadius: '4px', 
                     border: '1px solid #eee',
                     overflow: 'hidden'
@@ -468,8 +464,6 @@ function ReceiptViewer({ documentId, onBack }) {
                       style={{ 
                         width: '100%', 
                         height: 'auto', 
-                        maxHeight: '210px', 
-                        objectFit: 'contain',
                         display: 'block'
                       }}
                     />
