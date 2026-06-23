@@ -454,20 +454,16 @@ function ReceiptViewer({ documentId, onBack }) {
                   <div style={{ 
                     textAlign: 'center', 
                     marginTop: '0.35rem', 
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center'
+                    borderRadius: '4px', 
+                    border: '1px solid #eee',
+                    overflow: 'hidden'
                   }}>
                     <img
                       src={att.url}
                       alt={att.name}
                       style={{ 
-                        maxWidth: '100%', 
+                        width: '100%', 
                         height: 'auto', 
-                        maxHeight: '180px',
-                        objectFit: 'contain',
-                        borderRadius: '4px',
-                        border: '1px solid #eee',
                         display: 'block'
                       }}
                     />
