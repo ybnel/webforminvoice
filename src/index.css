@@ -536,6 +536,9 @@ input[type="number"].no-spin {
     padding: 0;
     align-items: flex-start;
     background: #f3f4f6;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
   }
   .form-container {
     padding: 1.25rem 1rem;
@@ -543,6 +546,9 @@ input[type="number"].no-spin {
     border: none;
     box-shadow: none;
     background: #f3f4f6;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   .header {
     margin-bottom: 1.5rem;
@@ -707,7 +713,27 @@ input[type="number"].no-spin {
 
 @media (max-width: 600px) {
   .receipt-viewer-print {
-    padding: 1.25rem 1rem !important;
+    padding: 1rem 0.75rem !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+  
+  .receipt-viewer-print h1 {
+    font-size: 1.5rem !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  .receipt-viewer-print .grid-2 {
+    gap: 1rem !important;
+  }
+  
+  .receipt-viewer-print table th, 
+  .receipt-viewer-print table td {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.8rem !important;
   }
 }
 

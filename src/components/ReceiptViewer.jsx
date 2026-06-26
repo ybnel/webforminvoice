@@ -221,8 +221,8 @@ function ReceiptViewer({ documentId, onBack }) {
         document.body
       )}
 
-      <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-        <h1 style={{ color: 'var(--primary)', fontSize: '1.8rem', fontWeight: '700', marginBottom: '0.5rem' }}>Bukti Klaim Reimbursement</h1>
+      <div className="header" style={{ marginBottom: '2rem' }}>
+        <h1 style={{ color: 'var(--primary)', fontWeight: '700', marginBottom: '0.5rem' }}>Bukti Klaim Reimbursement</h1>
         <p style={{ color: 'var(--text-muted)' }}>ID Transaksi: {documentId}</p>
       </div>
 
