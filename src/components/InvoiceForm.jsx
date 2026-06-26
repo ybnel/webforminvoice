@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Trash2, UploadCloud, FileText, User, Camera, Image, Crop, Loader2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Trash2, UploadCloud, FileText, User, Camera, Image, Crop, Loader2, X } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 
@@ -24,12 +24,74 @@ function InvoiceForm({
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState('');
-  const [allowance, setAllowance] = useState('');
+  
+  const [tripStartDate, setTripStartDate] = useState('');
+  const [tripEndDate, setTripEndDate] = useState('');
+  
+  // Date modal state
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [uploadAction, setUploadAction] = useState(null); // 'camera' | 'gallery'
+
+  const fileInputRef = useRef(null);
 
   // Calculate total amount automatically
   const totalAmount = attachments.reduce((sum, att) => sum + (parseFloat(att.amount) || 0), 0);
-  const parsedAllowance = parseFloat(allowance) || 0;
-  const remainingAllowance = parsedAllowance - totalAmount;
+
+  const getDateRange = (start, end) => {
+    const dates = [];
+    if (!start || !end) return dates;
+    const s = new Date(start);
+    const e = new Date(end);
+    s.setHours(0,0,0,0);
+    e.setHours(0,0,0,0);
+    if (s > e) return dates;
+    
+    const cur = new Date(s);
+    while (cur <= e) {
+      dates.push(cur.toISOString().split('T')[0]);
+      cur.setDate(cur.getDate() + 1);
+    }
+    return dates;
+  };
+
+  const formatDateIndo = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [year, month, day] = parts;
+    const months = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`;
+  };
+
+  const handleInitiateUpload = (action) => {
+    if (!tripStartDate || !tripEndDate) {
+      alert("Harap isi Tanggal Pergi dan Tanggal Pulang terlebih dahulu.");
+      return;
+    }
+    const dates = getDateRange(tripStartDate, tripEndDate);
+    if (dates.length === 0) {
+      alert("Rentang tanggal perjalanan dinas tidak valid.");
+      return;
+    }
+    setSelectedDate(dates[0]); // default to first day
+    setUploadAction(action);
+    setShowDateModal(true);
+  };
+
+  const handleConfirmUpload = () => {
+    setShowDateModal(false);
+    if (uploadAction === 'camera') {
+      onOpenScanner(selectedDate);
+    } else if (uploadAction === 'gallery') {
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,10 +102,10 @@ function InvoiceForm({
     }
 
     const missingDetails = attachments.some(att => 
-      !att.category || !att.invoiceNumber || !att.invoiceDate || !att.amount
+      !att.category || !att.description || !att.invoiceDate || !att.amount
     );
     if (missingDetails) {
-      alert("Harap lengkapi semua informasi (Kategori, No. Invoice, Tanggal Struk, & Nominal) untuk semua struk yang diunggah.");
+      alert("Harap lengkapi semua informasi (Kategori, Keterangan, Tanggal Struk, & Nominal) untuk semua struk yang diunggah.");
       return;
     }
 
@@ -73,7 +135,7 @@ function InvoiceForm({
           name: att.name,
           size: att.size,
           category: att.category,
-          invoiceNumber: att.invoiceNumber,
+          description: att.description,
           invoiceDate: att.invoiceDate,
           amount: parseFloat(att.amount) || 0,
           url: base64Url
@@ -89,9 +151,8 @@ function InvoiceForm({
         email: data.email,
         phone: data.phone,
         tripPurpose: data.tripPurpose,
-        tripDate: data.tripDate,
-        allowance: parsedAllowance,
-        remainingAllowance: remainingAllowance,
+        tripStartDate: tripStartDate,
+        tripEndDate: tripEndDate,
         totalAmount: totalAmount,
         attachments: uploadedFiles,
         createdAt: new Date()
@@ -115,12 +176,9 @@ function InvoiceForm({
               email: data.email,
               phone: data.phone,
               tripPurpose: data.tripPurpose,
-              invoiceNumber: attachments.map(att => att.invoiceNumber).join(', '), // Combined
-              invoiceDate: data.tripDate, // Tanggal Perjalanan mapped to Date column
-              allowance: parsedAllowance,
-              remainingAllowance: remainingAllowance,
+              description: attachments.map(att => att.description).join(', '), // Combined
+              invoiceDate: `${tripStartDate} s/d ${tripEndDate}`,
               totalAmount: totalAmount,
-              // We pass the portal link as the url so it logs in Google Sheets
               attachments: [{ 
                 category: '', 
                 url: `${window.location.origin}/?view=${docRef.id}` 
@@ -134,13 +192,14 @@ function InvoiceForm({
 
       alert(
         'Klaim reimbursement berhasil dikirim!\n' +
-        `Sisa Uang Saku: Rp ${remainingAllowance.toLocaleString('id-ID')}\n` +
+        `Total Pengeluaran: Rp ${totalAmount.toLocaleString('id-ID')}\n` +
         `Data tersimpan di Firestore & Google Sheets.`
       );
 
       // Reset form and attachments
       formElement.reset();
-      setAllowance('');
+      setTripStartDate('');
+      setTripEndDate('');
       onClearAttachments();
 
     } catch (error) {
@@ -210,39 +269,50 @@ function InvoiceForm({
         {/* Invoice Info Section */}
         <div className="section">
           <h2 className="section-title"><FileText size={20} /> Detail Pengajuan</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
             <div className="input-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="tripDate">Tanggal Perjalanan</label>
-              <input id="tripDate" name="tripDate" type="date" required disabled={isSubmitting} />
-            </div>
-            <div className="input-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="allowance">Uang Saku yang Diberikan (Rp)</label>
-              <input
-                id="allowance"
-                name="allowance"
-                type="number"
-                placeholder="Contoh: 1000000"
-                value={allowance}
-                onChange={(e) => setAllowance(e.target.value)}
-                required
-                disabled={isSubmitting}
-                className="no-spin"
+              <label htmlFor="tripStartDate">Tanggal Pergi</label>
+              <input 
+                id="tripStartDate" 
+                name="tripStartDate" 
+                type="date" 
+                value={tripStartDate}
+                onChange={(e) => {
+                  setTripStartDate(e.target.value);
+                  if (tripEndDate && e.target.value > tripEndDate) {
+                    setTripEndDate('');
+                  }
+                }}
+                required 
+                disabled={isSubmitting} 
               />
             </div>
             <div className="input-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="remainingAllowance">Sisa Uang Saku (Rp)</label>
+              <label htmlFor="tripEndDate">Tanggal Pulang</label>
+              <input 
+                id="tripEndDate" 
+                name="tripEndDate" 
+                type="date" 
+                value={tripEndDate}
+                min={tripStartDate}
+                onChange={(e) => setTripEndDate(e.target.value)}
+                required 
+                disabled={isSubmitting} 
+              />
+            </div>
+            <div className="input-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="totalAmountDisplay">Total Pengeluaran (Rp)</label>
               <input
-                id="remainingAllowance"
-                name="remainingAllowance"
+                id="totalAmountDisplay"
                 type="text"
-                value={`Rp ${remainingAllowance.toLocaleString('id-ID')}`}
+                value={`Rp ${totalAmount.toLocaleString('id-ID')}`}
                 readOnly
                 disabled={isSubmitting}
                 style={{ 
                   background: '#f1f5f9', 
                   cursor: 'not-allowed', 
                   fontWeight: '700', 
-                  color: remainingAllowance < 0 ? 'var(--danger)' : 'var(--primary)' 
+                  color: 'var(--primary)' 
                 }}
               />
             </div>
@@ -275,25 +345,36 @@ function InvoiceForm({
                   type="button"
                   className="btn btn-secondary"
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500' }}
-                  onClick={onOpenScanner}
+                  onClick={() => handleInitiateUpload('camera')}
                   disabled={isSubmitting}
                 >
                   <Camera size={24} style={{ margin: '0 auto' }} />
                   <span>Ambil Foto (Scan)</span>
                 </button>
 
-                <label className={`btn btn-secondary ${isSubmitting ? 'disabled' : ''}`} style={{ flex: 1, textAlign: 'center', cursor: isSubmitting ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500', opacity: isSubmitting ? 0.6 : 1 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', fontWeight: '500' }}
+                  onClick={() => handleInitiateUpload('gallery')}
+                  disabled={isSubmitting}
+                >
                   <Image size={24} style={{ margin: '0 auto' }} />
                   <span>Pilih Galeri</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    style={{ display: 'none' }}
-                    onChange={onFileChange}
-                    disabled={isSubmitting}
-                  />
-                </label>
+                </button>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    onFileChange(e, selectedDate);
+                    e.target.value = '';
+                  }}
+                  disabled={isSubmitting}
+                />
               </div>
             )}
 
@@ -360,14 +441,14 @@ function InvoiceForm({
                         </select>
                       </div>
 
-                      {/* No. Invoice */}
+                      {/* Keterangan */}
                       <div className="input-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>No. Invoice</label>
+                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Keterangan</label>
                         <input
                           type="text"
-                          placeholder="Contoh: INV-101"
-                          value={att.invoiceNumber || ''}
-                          onChange={(e) => onFieldChange(att.id, 'invoiceNumber', e.target.value)}
+                          placeholder="Contoh: Makan malam klien"
+                          value={att.description || ''}
+                          onChange={(e) => onFieldChange(att.id, 'description', e.target.value)}
                           required
                           disabled={isSubmitting}
                           style={{ padding: '0.45rem 0.5rem', fontSize: '0.85rem', borderRadius: '6px', height: 'auto', border: '1px solid var(--border)' }}
@@ -377,14 +458,22 @@ function InvoiceForm({
                       {/* Tanggal Struk */}
                       <div className="input-group" style={{ marginBottom: 0 }}>
                         <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Tanggal Struk</label>
-                        <input
-                          type="date"
+                        <select
                           value={att.invoiceDate || ''}
                           onChange={(e) => onFieldChange(att.id, 'invoiceDate', e.target.value)}
                           required
                           disabled={isSubmitting}
                           style={{ padding: '0.45rem 0.5rem', fontSize: '0.85rem', borderRadius: '6px', height: 'auto', border: '1px solid var(--border)' }}
-                        />
+                        >
+                          {att.invoiceDate && !getDateRange(tripStartDate, tripEndDate).includes(att.invoiceDate) && (
+                            <option value={att.invoiceDate}>{formatDateIndo(att.invoiceDate)}</option>
+                          )}
+                          {getDateRange(tripStartDate, tripEndDate).map((d) => (
+                            <option key={d} value={d}>
+                              {formatDateIndo(d)}
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       {/* Nominal */}
@@ -413,6 +502,78 @@ function InvoiceForm({
           Submit Invoice
         </button>
       </form>
+
+      {/* Pre-upload Date Selection Modal */}
+      {showDateModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }} onClick={() => setShowDateModal(false)}>
+          <div style={{
+            background: 'white',
+            padding: '1.5rem',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '400px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-main)' }}>Pilih Tanggal Struk</h3>
+              <button 
+                type="button" 
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0.25rem' }} 
+                onClick={() => setShowDateModal(false)}
+              >
+                <X size={18} style={{ color: 'var(--text-muted)' }} />
+              </button>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Pilih tanggal pengeluaran untuk struk yang akan Anda unggah:
+            </p>
+            <div className="input-group" style={{ marginBottom: 0 }}>
+              <select
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                style={{ width: '100%', padding: '0.65rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
+              >
+                {getDateRange(tripStartDate, tripEndDate).map((d) => (
+                  <option key={d} value={d}>
+                    {formatDateIndo(d)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ flex: 1, margin: 0, padding: '0.65rem' }}
+                onClick={() => setShowDateModal(false)}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ flex: 1, margin: 0, padding: '0.65rem' }}
+                onClick={handleConfirmUpload}
+              >
+                Lanjutkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

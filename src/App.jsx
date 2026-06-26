@@ -9,6 +9,7 @@ function App() {
   const [uploadQueue, setUploadQueue] = useState([]);
   const [editAttachment, setEditAttachment] = useState(null);
   const [viewDocumentId, setViewDocumentId] = useState(null);
+  const [pendingUploadDate, setPendingUploadDate] = useState('');
 
   // Check URL parameters for ?view=DOC_ID on mount
   useEffect(() => {
@@ -25,17 +26,18 @@ function App() {
     setViewDocumentId(null);
   };
 
-  const handleOpenScanner = () => {
+  const handleOpenScanner = (defaultDate = '') => {
     if (attachments.length >= 15) {
       alert("Batas maksimal 15 lampiran struk telah tercapai. Harap kirim pengajuan ini terlebih dahulu atau hapus lampiran yang tidak diperlukan.");
       return;
     }
+    setPendingUploadDate(defaultDate);
     setEditAttachment(null);
     setUploadQueue([]);
     setIsScannerOpen(true);
   };  
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (e, defaultDate = '') => {
     const files = Array.from(e.target.files);
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     if (imageFiles.length === 0) return;
@@ -46,6 +48,7 @@ function App() {
       return;
     }
 
+    setPendingUploadDate(defaultDate);
     setEditAttachment(null);
     setUploadQueue(imageFiles);
     setIsScannerOpen(true);
@@ -63,7 +66,12 @@ function App() {
       alert("Batas maksimal 15 lampiran telah tercapai. Struk tambahan tidak dapat disimpan.");
       return;
     }
-    setAttachments(prev => [...prev, { ...newAttachment, category: '' }]);
+    setAttachments(prev => [...prev, { 
+      ...newAttachment, 
+      category: '', 
+      description: '', 
+      invoiceDate: pendingUploadDate 
+    }]);
   };
 
   const handleSaveEdit = (updatedAttachment) => {

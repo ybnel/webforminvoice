@@ -253,7 +253,12 @@ function ReceiptViewer({ documentId, onBack }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem' }}>
             {claim.invoiceNumber && <div><strong>Invoice Number:</strong> {claim.invoiceNumber}</div>}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Calendar size={14} style={{ color: 'var(--text-muted)' }} /> <strong>Tanggal Perjalanan:</strong> &nbsp;{claim.tripDate || claim.invoiceDate}
+              <Calendar size={14} style={{ color: 'var(--text-muted)' }} /> <strong>Tanggal Perjalanan:</strong> &nbsp;
+              {claim.tripStartDate && claim.tripEndDate ? (
+                `${claim.tripStartDate} s/d ${claim.tripEndDate}`
+              ) : (
+                claim.tripDate || claim.invoiceDate
+              )}
             </div>
             {claim.allowance !== undefined ? (
               <>
@@ -295,7 +300,7 @@ function ReceiptViewer({ documentId, onBack }) {
               <th style={{ padding: '0.75rem 0.5rem', width: '50px' }}>No</th>
               <th style={{ padding: '0.75rem 0.5rem' }}>Tanggal</th>
               <th style={{ padding: '0.75rem 0.5rem' }}>Kategori</th>
-              <th style={{ padding: '0.75rem 0.5rem' }}>No. Invoice</th>
+              <th style={{ padding: '0.75rem 0.5rem' }}>Keterangan</th>
               <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>Nominal</th>
               <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', width: '100px' }} className="no-print">Bukti</th>
             </tr>
@@ -317,7 +322,7 @@ function ReceiptViewer({ documentId, onBack }) {
                     {att.category || 'Lainnya'}
                   </span>
                 </td>
-                <td style={{ padding: '0.75rem 0.5rem' }}>{att.invoiceNumber || '-'}</td>
+                <td style={{ padding: '0.75rem 0.5rem' }}>{att.description || att.invoiceNumber || '-'}</td>
                 <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right', fontWeight: '600' }}>
                   Rp {(att.amount || 0).toLocaleString('id-ID')}
                 </td>
@@ -447,7 +452,7 @@ function ReceiptViewer({ documentId, onBack }) {
                   <span style={{ color: 'var(--primary)' }}>Rp {(att.amount || 0).toLocaleString('id-ID')}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#475569' }}>
-                  <div>No: {att.invoiceNumber || '-'}</div>
+                  <div>Ket: {att.description || att.invoiceNumber || '-'}</div>
                   <div>Tgl: {att.invoiceDate || '-'}</div>
                 </div>
                 {att.url && (
@@ -485,7 +490,7 @@ function ReceiptViewer({ documentId, onBack }) {
                   Detail Bukti Kuitansi
                 </h4>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  {activePhoto.category} {activePhoto.invoiceNumber ? `(${activePhoto.invoiceNumber})` : ''}
+                  {activePhoto.category} {(activePhoto.description || activePhoto.invoiceNumber) ? `(${activePhoto.description || activePhoto.invoiceNumber})` : ''}
                 </span>
               </div>
               <button className="receipt-modal-close-btn" onClick={() => setActivePhoto(null)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>
