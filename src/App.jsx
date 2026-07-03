@@ -2,8 +2,17 @@ import React, { useState, useEffect } from 'react';
 import InvoiceForm from './components/InvoiceForm';
 import DocumentScanner from './components/DocumentScanner';
 import ReceiptViewer from './components/ReceiptViewer';
+import AdminDashboard from './components/AdminDashboard';
+import { ShieldCheck, Loader2 } from 'lucide-react';
+
+const ADMIN_PIN = '1234'; // Default PIN to access Admin Dashboard
 
 function App() {
+  const [isAdminPage, setIsAdminPage] = useState(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const [uploadQueue, setUploadQueue] = useState([]);
@@ -11,24 +20,65 @@ function App() {
   const [viewDocumentId, setViewDocumentId] = useState(null);
   const [pendingUploadDate, setPendingUploadDate] = useState('');
 
-  // Check URL parameters for ?view=DOC_ID on mount
+  // Detect URL parameter and verify admin session on mount / URL change
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const viewId = urlParams.get('view');
-    if (viewId) {
-      setViewDocumentId(viewId);
-    }
+    const checkRoute = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewId = urlParams.get('view');
+      const adminParam = urlParams.get('admin');
+
+      if (viewId) {
+        setViewDocumentId(viewId);
+      } else {
+        setViewDocumentId(null);
+      }
+
+      if (adminParam === 'true') {
+        setIsAdminPage(true);
+        const sessionAuth = sessionStorage.getItem('admin_authenticated') === 'true';
+        setIsAdminAuthenticated(sessionAuth);
+      } else {
+        setIsAdminPage(false);
+        setIsAdminAuthenticated(false);
+      }
+    };
+
+    checkRoute();
+    // Listen to history changes (back button etc.)
+    window.addEventListener('popstate', checkRoute);
+    return () => window.removeEventListener('popstate', checkRoute);
   }, []);
 
+  const handleAdminVerifyPin = (e) => {
+    e.preventDefault();
+    setPinError('');
+
+    if (pinInput === ADMIN_PIN) {
+      sessionStorage.setItem('admin_authenticated', 'true');
+      setIsAdminAuthenticated(true);
+      setPinInput('');
+    } else {
+      setPinError('Incorrect PIN. Please try again.');
+      setPinInput('');
+    }
+  };
+
+  const handleAdminSignOut = () => {
+    sessionStorage.removeItem('admin_authenticated');
+    setIsAdminAuthenticated(false);
+    // Clear URL parameters
+    window.history.pushState({}, '', window.location.pathname);
+    setIsAdminPage(false);
+  };
+
   const handleBackToForm = () => {
-    // Clear query parameter in browser history
     window.history.pushState({}, '', window.location.pathname);
     setViewDocumentId(null);
   };
 
   const handleOpenScanner = (defaultDate = '') => {
     if (attachments.length >= 15) {
-      alert("Batas maksimal 15 lampiran struk telah tercapai. Harap kirim pengajuan ini terlebih dahulu atau hapus lampiran yang tidak diperlukan.");
+      alert("Maximum limit of 15 attachments reached. Please submit this claim first or delete unused files.");
       return;
     }
     setPendingUploadDate(defaultDate);
@@ -43,7 +93,7 @@ function App() {
     if (imageFiles.length === 0) return;
 
     if (attachments.length + imageFiles.length > 15) {
-      alert(`Maksimal berkas struk yang dapat dilampirkan adalah 15. Anda mencoba menambahkan ${imageFiles.length} foto, sedangkan lampiran saat ini sudah ada ${attachments.length} foto.`);
+      alert(`Maximum attachments limit is 15. You tried to add ${imageFiles.length} photos, but you already have ${attachments.length} attached.`);
       e.target.value = '';
       return;
     }
@@ -63,14 +113,15 @@ function App() {
 
   const handleSaveScan = (newAttachment) => {
     if (attachments.length >= 15) {
-      alert("Batas maksimal 15 lampiran telah tercapai. Struk tambahan tidak dapat disimpan.");
+      alert("Maximum limit of 15 attachments reached. Additional receipt cannot be saved.");
       return;
     }
     setAttachments(prev => [...prev, { 
       ...newAttachment, 
       category: '', 
       description: '', 
-      invoiceDate: pendingUploadDate 
+      invoiceDate: pendingUploadDate,
+      numberOfPersons: 1
     }]);
   };
 
@@ -103,13 +154,126 @@ function App() {
     setAttachments([]);
   };
 
+  // If viewing a single claim rekap sheet (?view=DOC_ID)
   if (viewDocumentId) {
     return <ReceiptViewer documentId={viewDocumentId} onBack={handleBackToForm} />;
   }
 
+  // Render Admin Layout
+  if (isAdminPage) {
+    if (!isAdminAuthenticated) {
+      return (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          background: 'radial-gradient(circle at 10% 20%, rgb(241, 245, 249) 0%, rgb(226, 232, 240) 100%)',
+          padding: '1.5rem',
+          fontFamily: 'system-ui, -apple-system, sans-serif'
+        }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.4)',
+            borderRadius: '24px',
+            padding: '2.5rem 2rem',
+            width: '100%',
+            maxWidth: '380px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02)',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1.5rem'
+          }}>
+            <div style={{
+              background: 'rgba(79, 70, 229, 0.1)',
+              color: 'var(--primary, #4f46e5)',
+              padding: '1rem',
+              borderRadius: '50%',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <ShieldCheck size={36} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>
+                Admin Portal Gate
+              </h2>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
+                Please enter the security PIN to manage reimbursement claims.
+              </p>
+            </div>
+
+            {pinError && (
+              <div style={{
+                width: '100%',
+                background: '#fef2f2',
+                border: '1px solid #fee2e2',
+                color: '#ef4444',
+                borderRadius: '10px',
+                padding: '0.65rem 0.85rem',
+                fontSize: '0.8rem',
+                fontWeight: '500',
+                textAlign: 'left'
+              }}>
+                {pinError}
+              </div>
+            )}
+
+            <form onSubmit={handleAdminVerifyPin} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <input
+                type="password"
+                placeholder="Enter PIN (e.g., 1234)"
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value)}
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.95rem',
+                  textAlign: 'center',
+                  letterSpacing: '0.25em',
+                  outline: 'none'
+                }}
+              />
+              <button
+                type="submit"
+                style={{
+                  width: '100%',
+                  background: 'var(--primary, #4f46e5)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#4338ca'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#4f46e5'}
+              >
+                Verify PIN
+              </button>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    return <AdminDashboard onSignOut={handleAdminSignOut} />;
+  }
+
+  // Render Employee Layout (No login required)
   return (
-    <>
-      <div style={{ display: isScannerOpen ? 'none' : 'block' }}>
+    <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
+      <div style={{ display: isScannerOpen ? 'none' : 'block', padding: '1rem 0' }}>
         <InvoiceForm
           attachments={attachments}
           onOpenScanner={handleOpenScanner}
@@ -130,7 +294,7 @@ function App() {
           onSaveEdit={handleSaveEdit}
         />
       )}
-    </>
+    </div>
   );
 }
 

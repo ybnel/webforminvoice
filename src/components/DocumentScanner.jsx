@@ -109,8 +109,8 @@ function DocumentScanner({
           };
         }
       } catch (err) {
-        console.error("Gagal membuka kamera:", err);
-        alert("Gagal mengakses kamera. Pastikan Anda mengizinkan akses kamera di pengaturan browser Anda.");
+        console.error("Failed to access camera:", err);
+        alert("Camera access failed. Please ensure camera permissions are enabled in your browser settings.");
         onClose();
       }
     };
@@ -171,8 +171,8 @@ function DocumentScanner({
       setRawCapturedPhoto(dataUrl);
       setScanStep('cropping');
     } catch (err) {
-      console.error("Gagal mengambil foto:", err);
-      alert("Gagal mengambil foto. Silakan coba lagi.");
+      console.error("Capture failure:", err);
+      alert("Failed to capture photo. Please try again.");
     }
   };
 
@@ -286,8 +286,8 @@ function DocumentScanner({
         setCapturedImage(dataUrl);
         setScanStep('preview');
       } catch (err) {
-        console.error("Gagal melakukan cropping manual:", err);
-        alert("Gagal memotong gambar. Silakan coba lagi.");
+        console.error("Crop action failed:", err);
+        alert("Failed to crop image. Please try again.");
       }
     };
   };
@@ -326,7 +326,7 @@ function DocumentScanner({
             dst.delete();
           };
         } catch (e) {
-          console.error("Gagal memproses filter OpenCV:", e);
+          console.error("OpenCV filter processing failed:", e);
           setFilteredImage(capturedImage);
         }
       } else {
@@ -407,7 +407,7 @@ function DocumentScanner({
   return (
     <div className="scanner-page">
       <div className="scanner-page-header">
-        <h3><Camera size={20} /> Camera Document Scanner</h3>
+        <h3><Camera size={20} /> Receipt Document Scanner</h3>
         <button
           type="button"
           className="scanner-close-btn"
@@ -421,7 +421,7 @@ function DocumentScanner({
         {isCvLoading && (
           <div className="scanner-loading-overlay">
             <Loader2 className="scanner-spinner" size={32} />
-            <p style={{ fontSize: '0.9rem', fontWeight: '500' }}>Mengunduh modul OpenCV & Scanner...</p>
+            <p style={{ fontSize: '0.9rem', fontWeight: '500' }}>Loading OpenCV & Scanner modules...</p>
           </div>
         )}
 
@@ -430,7 +430,7 @@ function DocumentScanner({
             <video ref={videoRef} style={{ display: 'none' }} playsInline muted />
             <canvas ref={canvasRef} className="scanner-canvas-overlay" />
             <div className="scanner-status-toast">
-              Rapikan invoice agar bisa terlihat jelas
+              Align the receipt within the frame for a clear scan
             </div>
           </div>
         )}
@@ -438,7 +438,7 @@ function DocumentScanner({
         {scanStep === 'confirm_upload' && (
           <div className="scanner-step-container">
             <div className="scanner-status-toast" style={{ position: 'relative', top: 'auto', marginBottom: '1rem' }}>
-              Konfirmasi Lampiran
+              Confirm Attachment
             </div>
             {rawCapturedPhoto ? (
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
@@ -460,7 +460,7 @@ function DocumentScanner({
         {scanStep === 'cropping' && (
           <div className="scanner-step-container">
             <div className="scanner-status-toast" style={{ position: 'relative', top: 'auto', marginBottom: '1rem' }}>
-              Sesuaikan sudut invoice
+              Adjust the receipt corners
             </div>
             <div className="crop-container" id="crop-container-element">
               <div className="crop-wrapper">
@@ -531,7 +531,7 @@ function DocumentScanner({
                 onClick={() => setFilterType('color')}
               >
                 <Sparkles size={16} style={{ display: 'inline', marginRight: '0.25rem' }} />
-                Warna Asli
+                Original Color
               </button>
               <button
                 type="button"
@@ -539,7 +539,7 @@ function DocumentScanner({
                 onClick={() => setFilterType('bw')}
               >
                 <FileText size={16} style={{ display: 'inline', marginRight: '0.25rem' }} />
-                Scan (Hitam-Putih)
+                Scan (B&W Filter)
               </button>
             </div>
           </div>
@@ -554,7 +554,7 @@ function DocumentScanner({
             onClick={handleCapture}
             disabled={isCvLoading}
           >
-            <Camera size={18} /> Ambil Foto (Scan)
+            <Camera size={18} /> Capture Photo
           </button>
         ) : scanStep === 'confirm_upload' ? (
           <>
@@ -563,21 +563,21 @@ function DocumentScanner({
               className="btn btn-secondary"
               onClick={handleSkipOrCancelUpload}
             >
-              <X size={16} /> Batal
+              <X size={16} /> Cancel
             </button>
             <button
               type="button"
               className="btn btn-secondary"
               onClick={() => setScanStep('cropping')}
             >
-              <RefreshCw size={16} /> Potong & Rapikan
+              <RefreshCw size={16} /> Crop & Adjust
             </button>
             <button
               type="button"
               className="btn btn-primary"
               onClick={handleAttachDirectly}
             >
-              <Check size={16} /> Langsung Lampirkan
+              <Check size={16} /> Attach Directly
             </button>
           </>
         ) : scanStep === 'cropping' ? (
@@ -588,7 +588,7 @@ function DocumentScanner({
                 className="btn btn-secondary"
                 onClick={editAttachment ? onClose : handleSkipOrCancelUpload}
               >
-                <X size={16} /> Batal
+                <X size={16} /> Cancel
               </button>
             ) : (
               <button
@@ -600,7 +600,7 @@ function DocumentScanner({
                   setDisplayCorners(null);
                 }}
               >
-                <RefreshCw size={16} /> Ulangi Foto
+                <RefreshCw size={16} /> Retake Photo
               </button>
             )}
             <button
@@ -608,7 +608,7 @@ function DocumentScanner({
               className="btn btn-primary"
               onClick={handleCropApply}
             >
-              <Check size={16} /> Potong Kertas
+              <Check size={16} /> Apply Crop
             </button>
           </>
         ) : (
@@ -618,14 +618,14 @@ function DocumentScanner({
               className="btn btn-secondary"
               onClick={() => setScanStep('cropping')}
             >
-              <RefreshCw size={16} /> Ulangi Potong
+              <RefreshCw size={16} /> Reset Crop
             </button>
             <button
               type="button"
               className="btn btn-primary"
               onClick={handleSaveScan}
             >
-              <Check size={16} /> Simpan Hasil Scan
+              <Check size={16} /> Save Scanned Receipt
             </button>
           </>
         )}

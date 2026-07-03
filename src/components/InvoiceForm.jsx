@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
-import { Trash2, UploadCloud, FileText, User, Camera, Image, Crop, Loader2, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Trash2, UploadCloud, FileText, User, Camera, Image, Crop, Loader2, X, ExternalLink, Calendar, Landmark, Briefcase } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 
 // Helper function to read file as Base64 Data URL
 const fileToBase64 = (file) => {
@@ -11,6 +11,16 @@ const fileToBase64 = (file) => {
     reader.onload = () => resolve(reader.result);
     reader.onerror = error => reject(error);
   });
+};
+
+// Budget configuration per person
+const BUDGETS = {
+  'Lunch': 50000,
+  'Dinner': 100000,
+  'Transport (Departure)': 150000,
+  'Transport (Return)': 150000,
+  'Ticket': 0,
+  'Others': 0
 };
 
 function InvoiceForm({
@@ -28,7 +38,19 @@ function InvoiceForm({
   const [tripStartDate, setTripStartDate] = useState('');
   const [tripEndDate, setTripEndDate] = useState('');
   
-  // Date modal state
+  // Profile input states
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [costCenter, setCostCenter] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [saveProfile, setSaveProfile] = useState(true);
+
+  // Claims history state
+  const [historyClaims, setHistoryClaims] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Date modal state for uploads
   const [showDateModal, setShowDateModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [uploadAction, setUploadAction] = useState(null); // 'camera' | 'gallery'
@@ -38,46 +60,107 @@ function InvoiceForm({
   // Calculate total amount automatically
   const totalAmount = attachments.reduce((sum, att) => sum + (parseFloat(att.amount) || 0), 0);
 
+  // Load profile cache on mount
+  useEffect(() => {
+    const cachedName = localStorage.getItem('profile_fullname') || '';
+    const cachedEmail = localStorage.getItem('profile_email') || '';
+    const cachedPhone = localStorage.getItem('profile_phone') || '';
+    const cachedCostCenter = localStorage.getItem('profile_costcenter') || '';
+    const cachedJobTitle = localStorage.getItem('profile_jobtitle') || '';
+    const cachedSave = localStorage.getItem('profile_save_consent') !== 'false';
+
+    setFullName(cachedName);
+    setEmail(cachedEmail);
+    setPhone(cachedPhone);
+    setCostCenter(cachedCostCenter);
+    setJobTitle(cachedJobTitle);
+    setSaveProfile(cachedSave);
+  }, []);
+
+  // Fetch claims history dynamically when email updates
+  useEffect(() => {
+    if (email && email.trim() !== '') {
+      fetchUserHistory(email.trim().toLowerCase());
+    } else {
+      setHistoryClaims([]);
+      setLoadingHistory(false);
+    }
+  }, [email]);
+
+  const fetchUserHistory = async (targetEmail) => {
+    try {
+      setLoadingHistory(true);
+      const q = query(
+        collection(db, "reimbursements"),
+        where("email", "==", targetEmail)
+      );
+      const querySnapshot = await getDocs(q);
+      const claims = [];
+      querySnapshot.forEach((doc) => {
+        claims.push({ id: doc.id, ...doc.data() });
+      });
+
+      // Sort locally by creation date descending
+      claims.sort((a, b) => {
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+        return dateB - dateA;
+      });
+
+      setHistoryClaims(claims);
+    } catch (err) {
+      console.error("Error fetching history:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   const getDateRange = (start, end) => {
     const dates = [];
     if (!start || !end) return dates;
-    const s = new Date(start);
-    const e = new Date(end);
-    s.setHours(0,0,0,0);
-    e.setHours(0,0,0,0);
+    
+    // Parse using parts to avoid timezone shifting
+    const [startYear, startMonth, startDay] = start.split('-').map(Number);
+    const [endYear, endMonth, endDay] = end.split('-').map(Number);
+    
+    // Create Date objects in local time
+    const s = new Date(startYear, startMonth - 1, startDay);
+    const e = new Date(endYear, endMonth - 1, endDay);
+    
     if (s > e) return dates;
     
     const cur = new Date(s);
     while (cur <= e) {
-      dates.push(cur.toISOString().split('T')[0]);
+      // Format as YYYY-MM-DD in local time
+      const y = cur.getFullYear();
+      const m = String(cur.getMonth() + 1).padStart(2, '0');
+      const d = String(cur.getDate()).padStart(2, '0');
+      dates.push(`${y}-${m}-${d}`);
+      
       cur.setDate(cur.getDate() + 1);
     }
     return dates;
   };
 
-  const formatDateIndo = (dateStr) => {
+  // Convert date format to clean English layout
+  const formatDateEnglish = (dateStr) => {
     if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return dateStr;
-    const [year, month, day] = parts;
-    const months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`;
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   const handleInitiateUpload = (action) => {
     if (!tripStartDate || !tripEndDate) {
-      alert("Harap isi Tanggal Pergi dan Tanggal Pulang terlebih dahulu.");
+      alert("Please fill in both Departure Date and Return Date first.");
       return;
     }
     const dates = getDateRange(tripStartDate, tripEndDate);
     if (dates.length === 0) {
-      alert("Rentang tanggal perjalanan dinas tidak valid.");
+      alert("Invalid travel date range selected.");
       return;
     }
-    setSelectedDate(dates[0]); // default to first day
+    setSelectedDate(dates[0]); // default to first day of trip
     setUploadAction(action);
     setShowDateModal(true);
   };
@@ -93,11 +176,30 @@ function InvoiceForm({
     }
   };
 
+  // Update amount automatically when category or pax changes
+  const handleCategoryChange = (attId, newCategory, currentPax) => {
+    onFieldChange(attId, 'category', newCategory);
+    const multiplier = parseInt(currentPax) || 1;
+    const budgetPerPax = BUDGETS[newCategory] || 0;
+    if (budgetPerPax > 0) {
+      onFieldChange(attId, 'amount', (budgetPerPax * multiplier).toString());
+    }
+  };
+
+  const handlePaxChange = (attId, currentCategory, newPax) => {
+    const paxVal = parseInt(newPax) || 1;
+    onFieldChange(attId, 'numberOfPersons', paxVal);
+    const budgetPerPax = BUDGETS[currentCategory] || 0;
+    if (budgetPerPax > 0) {
+      onFieldChange(attId, 'amount', (budgetPerPax * paxVal).toString());
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (attachments.length === 0) {
-      alert("Harap unggah minimal 1 struk/bukti kuitansi.");
+      alert("Please upload at least 1 receipt file.");
       return;
     }
 
@@ -105,28 +207,40 @@ function InvoiceForm({
       !att.category || !att.description || !att.invoiceDate || !att.amount
     );
     if (missingDetails) {
-      alert("Harap lengkapi semua informasi (Kategori, Keterangan, Tanggal Struk, & Nominal) untuk semua struk yang diunggah.");
+      alert("Please complete Category, Description, Date, and Amount for all uploaded receipts.");
       return;
     }
 
     const invalidAmount = attachments.some(att => parseFloat(att.amount) <= 0 || isNaN(parseFloat(att.amount)));
     if (invalidAmount) {
-      alert("Harap masukkan nominal yang valid untuk semua struk.");
+      alert("Please enter a valid expense amount for all receipts.");
       return;
     }
 
     setIsSubmitting(true);
-    setSubmitStatus('Memproses berkas struk ke Base64...');
+    setSubmitStatus('Processing receipt files to Base64...');
 
-    const formElement = e.currentTarget;
-    const formData = new FormData(formElement);
-    const data = Object.fromEntries(formData.entries());
+    // Save profile cache or clear it depending on permission checkbox
+    if (saveProfile) {
+      localStorage.setItem('profile_fullname', fullName);
+      localStorage.setItem('profile_email', email);
+      localStorage.setItem('profile_phone', phone);
+      localStorage.setItem('profile_costcenter', costCenter);
+      localStorage.setItem('profile_jobtitle', jobTitle);
+      localStorage.setItem('profile_save_consent', 'true');
+    } else {
+      localStorage.removeItem('profile_fullname');
+      localStorage.removeItem('profile_email');
+      localStorage.removeItem('profile_phone');
+      localStorage.removeItem('profile_costcenter');
+      localStorage.removeItem('profile_jobtitle');
+      localStorage.setItem('profile_save_consent', 'false');
+    }
 
     try {
       // 1. Process files to Base64 strings
       const uploadPromises = attachments.map(async (att) => {
         let base64Url = att.url;
-        // If it's a blob URL (un-cropped gallery upload), read the file as Base64
         if (att.url.startsWith('blob:')) {
           base64Url = await fileToBase64(att.file);
         }
@@ -138,6 +252,7 @@ function InvoiceForm({
           description: att.description,
           invoiceDate: att.invoiceDate,
           amount: parseFloat(att.amount) || 0,
+          numberOfPersons: parseInt(att.numberOfPersons) || 1,
           url: base64Url
         };
       });
@@ -145,25 +260,28 @@ function InvoiceForm({
       const uploadedFiles = await Promise.all(uploadPromises);
 
       // 2. Save structured record to Cloud Firestore
-      setSubmitStatus('Menyimpan data klaim ke Firestore...');
+      setSubmitStatus('Saving claim details to database...');
       const docRef = await addDoc(collection(db, "reimbursements"), {
-        fullName: data.fullName,
-        email: data.email,
-        phone: data.phone,
-        tripPurpose: data.tripPurpose,
+        fullName: fullName,
+        email: email.toLowerCase(),
+        phone: phone,
+        costCenter: costCenter,
+        jobTitle: jobTitle,
+        tripPurpose: e.target.tripPurpose.value,
         tripStartDate: tripStartDate,
         tripEndDate: tripEndDate,
         totalAmount: totalAmount,
         attachments: uploadedFiles,
+        status: 'Pending', // initial status
         createdAt: new Date()
       });
 
-      console.log("Document written with ID: ", docRef.id);
+      console.log("Document saved with ID: ", docRef.id);
 
       // 3. Send view portal link to Google Sheets via Webhook
       const webhookUrl = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
       if (webhookUrl && webhookUrl !== 'YOUR_GOOGLE_SHEETS_WEBHOOK_URL' && webhookUrl.trim() !== '') {
-        setSubmitStatus('Mencatat klaim ke Google Sheets...');
+        setSubmitStatus('Logging claim to sheets database...');
         try {
           await fetch(webhookUrl, {
             method: 'POST',
@@ -172,42 +290,55 @@ function InvoiceForm({
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              fullName: data.fullName,
-              email: data.email,
-              phone: data.phone,
-              tripPurpose: data.tripPurpose,
-              description: attachments.map(att => att.description).join(', '), // Combined
-              invoiceDate: `${tripStartDate} s/d ${tripEndDate}`,
+              fullName: fullName,
+              email: email.toLowerCase(),
+              phone: phone,
+              tripPurpose: e.target.tripPurpose.value,
+              description: `Office Branch: ${costCenter}, Job: ${jobTitle}. Receipts: ` + attachments.map(att => `${att.category} (${att.description})`).join(', '),
+              invoiceDate: `${tripStartDate} to ${tripEndDate}`,
               totalAmount: totalAmount,
               attachments: [{ 
-                category: '', 
+                category: 'Claim Portal Link', 
                 url: `${window.location.origin}/?view=${docRef.id}` 
               }]
             })
           });
         } catch (sheetError) {
-          console.error("Gagal mengirim ke Google Sheets:", sheetError);
+          console.error("Failed Google Sheets sync:", sheetError);
         }
       }
 
       alert(
-        'Klaim reimbursement berhasil dikirim!\n' +
-        `Total Pengeluaran: Rp ${totalAmount.toLocaleString('id-ID')}\n` +
-        `Data tersimpan di Firestore & Google Sheets.`
+        'Reimbursement claim successfully submitted!\n' +
+        `Total Claimed: Rp ${totalAmount.toLocaleString('id-ID')}\n` +
+        `Claim status is now Pending verification.`
       );
 
-      // Reset form and attachments
-      formElement.reset();
+      // Reset form and local attachment states
+      e.target.tripPurpose.value = '';
       setTripStartDate('');
       setTripEndDate('');
       onClearAttachments();
+      
+      // Refresh claims history list
+      fetchUserHistory(email.trim().toLowerCase());
 
     } catch (error) {
       console.error("Submission error:", error);
-      alert("Terjadi kesalahan saat mengirim data. Silakan coba lagi.\n\nDetail: " + error.message);
+      alert("Failed to submit claim. Please try again. Error: " + error.message);
     } finally {
       setIsSubmitting(false);
       setSubmitStatus('');
+    }
+  };
+
+  const getStatusBadgeColor = (status) => {
+    switch (status) {
+      case 'Pending': return { bg: '#fef3c7', text: '#d97706' };
+      case 'Approved': return { bg: '#d1fae5', text: '#059669' };
+      case 'Reimbursed': return { bg: '#dbeafe', text: '#2563eb' };
+      case 'Rejected': return { bg: '#fee2e2', text: '#dc2626' };
+      default: return { bg: '#f1f5f9', text: '#475569' };
     }
   };
 
@@ -236,42 +367,129 @@ function InvoiceForm({
       )}
 
       <div className="header">
-        <h1>Invoice Submission</h1>
-        <p>Please enter your invoice details below</p>
+        <h1>Expense Reimbursement Form</h1>
+        <p>Complete your personal profile and claim details below</p>
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* Client Info Section */}
+        {/* Personal Profile Section */}
         <div className="section">
-          <h2 className="section-title"><User size={20} /> Data Diri</h2>
+          <h2 className="section-title"><User size={20} /> Personal Information</h2>
           <div className="grid-2">
             <div className="input-group">
-              <label htmlFor="fullName">Nama Lengkap</label>
-              <input id="fullName" name="fullName" type="text" placeholder="Your Name" required disabled={isSubmitting} />
+              <label htmlFor="fullName">Full Name</label>
+              <input 
+                id="fullName" 
+                name="fullName" 
+                type="text" 
+                placeholder="John Doe" 
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                disabled={isSubmitting} 
+              />
             </div>
             <div className="input-group">
-              <label htmlFor="phone">Nomor Telepon</label>
-              <input id="phone" name="phone" type="tel" placeholder="081234567890" required disabled={isSubmitting} />
+              <label htmlFor="phone">Phone Number</label>
+              <input 
+                id="phone" 
+                name="phone" 
+                type="tel" 
+                placeholder="081234567890" 
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required 
+                disabled={isSubmitting} 
+              />
             </div>
           </div>
-          <div className="grid-2" style={{ marginTop: '0.5rem' }}>
+          <div className="grid-2" style={{ marginTop: '0.75rem' }}>
             <div className="input-group">
-              <label htmlFor="email">Email</label>
-              <input id="email" name="email" type="email" placeholder="yourname@email.com" required disabled={isSubmitting} />
+              <label htmlFor="email">Email Address</label>
+              <input 
+                id="email" 
+                name="email" 
+                type="email" 
+                placeholder="johndoe@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required 
+                disabled={isSubmitting} 
+              />
             </div>
-            <div className="input-group">
-              <label htmlFor="tripPurpose">Keperluan / Tujuan Perjalanan</label>
-              <input id="tripPurpose" name="tripPurpose" type="text" placeholder="Business trip to Bandung" required disabled={isSubmitting} />
+            <div className="grid-2" style={{ gap: '1rem', margin: 0, padding: 0 }}>
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <label htmlFor="costCenter"><Landmark size={14} style={{ display: 'inline', marginRight: '0.2rem', verticalAlign: 'middle' }} /> Office Branch</label>
+                <input 
+                  id="costCenter" 
+                  name="costCenter" 
+                  type="text" 
+                  placeholder="Surabaya / Bandung" 
+                  value={costCenter}
+                  onChange={(e) => setCostCenter(e.target.value)}
+                  required 
+                  disabled={isSubmitting} 
+                />
+              </div>
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <label htmlFor="jobTitle"><Briefcase size={14} style={{ display: 'inline', marginRight: '0.2rem', verticalAlign: 'middle' }} /> Job Title / Role</label>
+                <select 
+                  id="jobTitle" 
+                  name="jobTitle" 
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  required 
+                  disabled={isSubmitting} 
+                  style={{ padding: '0.65rem 0.75rem', height: 'auto' }}
+                >
+                  <option value="" disabled>-- Job Title --</option>
+                  <option value="CC">CC</option>
+                  <option value="PA">PA</option>
+                  <option value="RD">RD</option>
+                  <option value="Teacher">Teacher</option>
+                  <option value="STM">STM</option>
+                  <option value="PM">PM</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Director">Director</option>
+                </select>
+              </div>
             </div>
+          </div>
+
+          {/* Device Profile Cache Storage Consent */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.25rem', padding: '0 0.25rem' }}>
+            <input
+              type="checkbox"
+              id="saveProfileCheckbox"
+              checked={saveProfile}
+              onChange={(e) => setSaveProfile(e.target.checked)}
+              style={{ width: 'auto', cursor: 'pointer' }}
+            />
+            <label htmlFor="saveProfileCheckbox" style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600', cursor: 'pointer', userSelect: 'none' }}>
+              Remember my personal details on this device for future claims
+            </label>
           </div>
         </div>
 
-        {/* Invoice Info Section */}
+        {/* Claim Details Section */}
         <div className="section">
-          <h2 className="section-title"><FileText size={20} /> Detail Pengajuan</h2>
+          <h2 className="section-title"><FileText size={20} /> Application Details</h2>
+          
+          <div className="input-group" style={{ marginBottom: '1rem' }}>
+            <label htmlFor="tripPurpose">Trip Purpose / Expense Context</label>
+            <input 
+              id="tripPurpose" 
+              name="tripPurpose" 
+              type="text" 
+              placeholder="e.g., Tech conference in Jakarta / Client visit to Bali" 
+              required 
+              disabled={isSubmitting} 
+            />
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
             <div className="input-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="tripStartDate">Tanggal Pergi</label>
+              <label htmlFor="tripStartDate">Departure Date</label>
               <input 
                 id="tripStartDate" 
                 name="tripStartDate" 
@@ -288,7 +506,7 @@ function InvoiceForm({
               />
             </div>
             <div className="input-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="tripEndDate">Tanggal Pulang</label>
+              <label htmlFor="tripEndDate">Return Date</label>
               <input 
                 id="tripEndDate" 
                 name="tripEndDate" 
@@ -301,7 +519,7 @@ function InvoiceForm({
               />
             </div>
             <div className="input-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="totalAmountDisplay">Total Pengeluaran (Rp)</label>
+              <label htmlFor="totalAmountDisplay">Total Expense (Rp)</label>
               <input
                 id="totalAmountDisplay"
                 type="text"
@@ -321,9 +539,9 @@ function InvoiceForm({
 
         {/* Attachment Section */}
         <div className="section">
-          <h2 className="section-title"><UploadCloud size={20} /> Attachment</h2>
+          <h2 className="section-title"><UploadCloud size={20} /> Attachment Receipts</h2>
           <div className="input-group">
-            <label>Upload Invoice File</label>
+            <label>Upload Receipt Files (Max 15)</label>
 
             {attachments.length >= 15 ? (
               <div style={{
@@ -337,7 +555,7 @@ function InvoiceForm({
                 textAlign: 'center',
                 marginTop: '0.5rem'
               }}>
-                Batas maksimal 15 lampiran kuitansi telah tercapai. Harap kirim pengajuan ini terlebih dahulu atau hapus lampiran yang tidak diperlukan untuk menambahkan lampiran baru.
+                Maximum limit of 15 attachments reached. Please submit this claim form or delete unwanted attachments.
               </div>
             ) : (
               <div className="upload-options" style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
@@ -349,7 +567,7 @@ function InvoiceForm({
                   disabled={isSubmitting}
                 >
                   <Camera size={24} style={{ margin: '0 auto' }} />
-                  <span>Ambil Foto (Scan)</span>
+                  <span>Capture Photo (Scan)</span>
                 </button>
 
                 <button
@@ -360,7 +578,7 @@ function InvoiceForm({
                   disabled={isSubmitting}
                 >
                   <Image size={24} style={{ margin: '0 auto' }} />
-                  <span>Pilih Galeri</span>
+                  <span>Choose Gallery</span>
                 </button>
 
                 <input
@@ -402,7 +620,7 @@ function InvoiceForm({
                           type="button"
                           className="btn-icon-secondary"
                           onClick={() => onOpenEditor(att)}
-                          title="Potong & Rapikan"
+                          title="Crop & Rotate"
                           disabled={isSubmitting}
                           style={{ padding: '0.35rem' }}
                         >
@@ -412,7 +630,7 @@ function InvoiceForm({
                           type="button"
                           className="btn-icon"
                           onClick={() => onRemoveAttachment(att.id)}
-                          title="Hapus Lampiran"
+                          title="Delete Attachment"
                           disabled={isSubmitting}
                           style={{ padding: '0.35rem' }}
                         >
@@ -422,42 +640,45 @@ function InvoiceForm({
                     </div>
 
                     {/* Bottom Row: Inputs Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', width: '100%', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
-                      {/* Kategori */}
+                    <div className="receipt-grid">
+                      {/* Category */}
                       <div className="input-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Kategori</label>
+                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Category</label>
                         <select
                           value={att.category || ''}
-                          onChange={(e) => onFieldChange(att.id, 'category', e.target.value)}
+                          onChange={(e) => handleCategoryChange(att.id, e.target.value, att.numberOfPersons || 1)}
                           required
                           disabled={isSubmitting}
                           style={{ padding: '0.45rem 0.5rem', fontSize: '0.85rem', borderRadius: '6px', height: 'auto', border: '1px solid var(--border)' }}
                         >
-                          <option value="" disabled>-- Kategori --</option>
-                          <option value="Tiket">Tiket</option>
-                          <option value="Makanan">Makanan</option>
-                          <option value="Transportasi">Transportasi</option>
-                          <option value="Lainnya">Lainnya</option>
+                          <option value="" disabled>-- Select --</option>
+                          <option value="Lunch">Lunch</option>
+                          <option value="Dinner">Dinner</option>
+                          <option value="Transport (Departure)">Transport (Departure)</option>
+                          <option value="Transport (Return)">Transport (Return)</option>
+                          <option value="Ticket">Ticket</option>
+                          <option value="Others">Others</option>
                         </select>
                       </div>
 
-                      {/* Keterangan */}
+                      {/* Nominal Amount */}
                       <div className="input-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Keterangan</label>
+                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Nominal (Rp)</label>
                         <input
-                          type="text"
-                          placeholder="Contoh: Makan malam klien"
-                          value={att.description || ''}
-                          onChange={(e) => onFieldChange(att.id, 'description', e.target.value)}
+                          type="number"
+                          placeholder="e.g., 150000"
+                          className="no-spin"
+                          value={att.amount || ''}
+                          onChange={(e) => onFieldChange(att.id, 'amount', e.target.value)}
                           required
                           disabled={isSubmitting}
                           style={{ padding: '0.45rem 0.5rem', fontSize: '0.85rem', borderRadius: '6px', height: 'auto', border: '1px solid var(--border)' }}
                         />
                       </div>
 
-                      {/* Tanggal Struk */}
+                      {/* Date */}
                       <div className="input-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Tanggal Struk</label>
+                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Date</label>
                         <select
                           value={att.invoiceDate || ''}
                           onChange={(e) => onFieldChange(att.id, 'invoiceDate', e.target.value)}
@@ -466,25 +687,39 @@ function InvoiceForm({
                           style={{ padding: '0.45rem 0.5rem', fontSize: '0.85rem', borderRadius: '6px', height: 'auto', border: '1px solid var(--border)' }}
                         >
                           {att.invoiceDate && !getDateRange(tripStartDate, tripEndDate).includes(att.invoiceDate) && (
-                            <option value={att.invoiceDate}>{formatDateIndo(att.invoiceDate)}</option>
+                            <option value={att.invoiceDate}>{formatDateEnglish(att.invoiceDate)}</option>
                           )}
                           {getDateRange(tripStartDate, tripEndDate).map((d) => (
                             <option key={d} value={d}>
-                              {formatDateIndo(d)}
+                              {formatDateEnglish(d)}
                             </option>
                           ))}
                         </select>
                       </div>
 
-                      {/* Nominal */}
+                      {/* Pax / Traveler Count */}
                       <div className="input-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Nominal (Rp)</label>
+                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Pax (Persons)</label>
                         <input
                           type="number"
-                          placeholder="150000"
-                          className="no-spin"
-                          value={att.amount || ''}
-                          onChange={(e) => onFieldChange(att.id, 'amount', e.target.value)}
+                          min="1"
+                          placeholder="1"
+                          value={att.numberOfPersons || 1}
+                          onChange={(e) => handlePaxChange(att.id, att.category || '', e.target.value)}
+                          required
+                          disabled={isSubmitting}
+                          style={{ padding: '0.45rem 0.5rem', fontSize: '0.85rem', borderRadius: '6px', height: 'auto', border: '1px solid var(--border)' }}
+                        />
+                      </div>
+
+                      {/* Description */}
+                      <div className="input-group" style={{ marginBottom: 0, gridColumn: '1 / -1' }}>
+                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Description</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Client lunch meeting"
+                          value={att.description || ''}
+                          onChange={(e) => onFieldChange(att.id, 'description', e.target.value)}
                           required
                           disabled={isSubmitting}
                           style={{ padding: '0.45rem 0.5rem', fontSize: '0.85rem', borderRadius: '6px', height: 'auto', border: '1px solid var(--border)' }}
@@ -498,10 +733,104 @@ function InvoiceForm({
           </div>
         </div>
 
-        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-          Submit Invoice
+        <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ marginTop: '1rem' }}>
+          Submit Claim Form
         </button>
       </form>
+
+      {/* History Log Section */}
+      <div className="section" style={{ marginTop: '2.5rem', borderTop: '2px solid var(--border)', paddingTop: '2rem' }}>
+        <h2 className="section-title" style={{ color: 'var(--text-main)', marginBottom: '1.25rem' }}>
+          <Landmark size={20} style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle' }} /> My Claims History
+        </h2>
+
+        {loadingHistory ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', padding: '1rem 0' }}>
+            <Loader2 className="scanner-spinner" size={18} />
+            <span style={{ fontSize: '0.9rem' }}>Loading claim logs...</span>
+          </div>
+        ) : !email || email.trim() === '' ? (
+          <div style={{ background: '#f8fafc', border: '1px dashed var(--border)', borderRadius: '12px', padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            Enter your email address in the profile section above to view your claims history on this device.
+          </div>
+        ) : historyClaims.length === 0 ? (
+          <div style={{ background: '#f8fafc', border: '1px dashed var(--border)', borderRadius: '12px', padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            No claims registered under <strong>{email}</strong>.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--border)', fontWeight: '600', color: 'var(--text-muted)' }}>
+                  <th style={{ padding: '0.85rem 1rem' }}>Submitted On</th>
+                  <th style={{ padding: '0.85rem 1rem' }}>Purpose</th>
+                  <th style={{ padding: '0.85rem 1rem' }}>Trip Period</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Total Amount</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>Status</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>Receipt</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historyClaims.map((claim) => {
+                  const subDate = claim.createdAt?.toDate 
+                    ? claim.createdAt.toDate().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : 'Recent';
+                  const badge = getStatusBadgeColor(claim.status);
+                  
+                  return (
+                    <tr key={claim.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '0.85rem 1rem', fontWeight: '500' }}>{subDate}</td>
+                      <td style={{ padding: '0.85rem 1rem', color: 'var(--text-main)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={claim.tripPurpose}>
+                        {claim.tripPurpose}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>
+                        {claim.tripStartDate} to {claim.tripEndDate}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'right', fontWeight: '700', color: 'var(--text-main)' }}>
+                        Rp {claim.totalAmount.toLocaleString('id-ID')}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                        <span style={{
+                          background: badge.bg,
+                          color: badge.text,
+                          padding: '0.25rem 0.65rem',
+                          borderRadius: '12px',
+                          fontSize: '0.75rem',
+                          fontWeight: '700',
+                          display: 'inline-block',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.02em'
+                        }}>
+                          {claim.status || 'Pending'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                        <a 
+                          href={`/?view=${claim.id}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{
+                            color: 'var(--primary)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.2rem',
+                            fontWeight: '600',
+                            textDecoration: 'none'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                          onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                        >
+                          View <ExternalLink size={12} />
+                        </a>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Pre-upload Date Selection Modal */}
       {showDateModal && (
@@ -528,7 +857,7 @@ function InvoiceForm({
             gap: '1rem'
           }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-main)' }}>Pilih Tanggal Struk</h3>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-main)' }}>Select Receipt Date</h3>
               <button 
                 type="button" 
                 style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0.25rem' }} 
@@ -538,7 +867,7 @@ function InvoiceForm({
               </button>
             </div>
             <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Pilih tanggal pengeluaran untuk struk yang akan Anda unggah:
+              Choose the transaction date for this receipt upload:
             </p>
             <div className="input-group" style={{ marginBottom: 0 }}>
               <select
@@ -548,7 +877,7 @@ function InvoiceForm({
               >
                 {getDateRange(tripStartDate, tripEndDate).map((d) => (
                   <option key={d} value={d}>
-                    {formatDateIndo(d)}
+                    {formatDateEnglish(d)}
                   </option>
                 ))}
               </select>
@@ -560,7 +889,7 @@ function InvoiceForm({
                 style={{ flex: 1, margin: 0, padding: '0.65rem' }}
                 onClick={() => setShowDateModal(false)}
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
@@ -568,7 +897,7 @@ function InvoiceForm({
                 style={{ flex: 1, margin: 0, padding: '0.65rem' }}
                 onClick={handleConfirmUpload}
               >
-                Lanjutkan
+                Continue
               </button>
             </div>
           </div>
