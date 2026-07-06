@@ -176,23 +176,15 @@ function InvoiceForm({
     }
   };
 
-  // Update amount automatically when category or pax changes
+  // Update category
   const handleCategoryChange = (attId, newCategory, currentPax) => {
     onFieldChange(attId, 'category', newCategory);
-    const multiplier = parseInt(currentPax) || 1;
-    const budgetPerPax = BUDGETS[newCategory] || 0;
-    if (budgetPerPax > 0) {
-      onFieldChange(attId, 'amount', (budgetPerPax * multiplier).toString());
-    }
   };
 
+  // Update pax
   const handlePaxChange = (attId, currentCategory, newPax) => {
     const paxVal = parseInt(newPax) || 1;
     onFieldChange(attId, 'numberOfPersons', paxVal);
-    const budgetPerPax = BUDGETS[currentCategory] || 0;
-    if (budgetPerPax > 0) {
-      onFieldChange(attId, 'amount', (budgetPerPax * paxVal).toString());
-    }
   };
 
   const handleSubmit = async (e) => {
