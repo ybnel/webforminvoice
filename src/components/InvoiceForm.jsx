@@ -15,8 +15,8 @@ const fileToBase64 = (file) => {
 
 // Budget configuration per person
 const BUDGETS = {
-  'Lunch': 50000,
-  'Dinner': 100000,
+  'Lunch': 30000,
+  'Dinner': 50000,
   'Transport (Departure)': 150000,
   'Transport (Return)': 150000,
   'Ticket': 0,
@@ -215,6 +215,29 @@ function InvoiceForm({
     if (invalidAmount) {
       alert("Please enter a valid expense amount for all receipts.");
       return;
+    }
+
+    // Budget Limit Validation
+    for (let i = 0; i < attachments.length; i++) {
+      const att = attachments[i];
+      const category = att.category;
+      const amount = parseFloat(att.amount) || 0;
+      const pax = parseInt(att.numberOfPersons) || 1;
+      const budgetPerPax = BUDGETS[category] || 0;
+      
+      if (budgetPerPax > 0) {
+        const maxAllowed = budgetPerPax * pax;
+        if (amount > maxAllowed) {
+          alert(
+            `Budget Limit Exceeded!\n\n` +
+            `Receipt #${i + 1} (${category}) exceeds the allowable budget.\n` +
+            `Maximum limit: Rp ${maxAllowed.toLocaleString('id-ID')} (${pax} Pax)\n` +
+            `Your input: Rp ${amount.toLocaleString('id-ID')}\n\n` +
+            `Please adjust the nominal amount to be within the allowable limit.`
+          );
+          return;
+        }
+      }
     }
 
     setIsSubmitting(true);
@@ -662,19 +685,37 @@ function InvoiceForm({
                       </div>
 
                       {/* Nominal Amount */}
-                      <div className="input-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Nominal (Rp)</label>
-                        <input
-                          type="number"
-                          placeholder="e.g., 150000"
-                          className="no-spin"
-                          value={att.amount || ''}
-                          onChange={(e) => onFieldChange(att.id, 'amount', e.target.value)}
-                          required
-                          disabled={isSubmitting}
-                          style={{ padding: '0.45rem 0.5rem', fontSize: '0.85rem', borderRadius: '6px', height: 'auto', border: '1px solid var(--border)' }}
-                        />
-                      </div>
+                      {(() => {
+                        const maxAllowed = (BUDGETS[att.category] || 0) * (parseInt(att.numberOfPersons) || 1);
+                        const isOverBudget = BUDGETS[att.category] > 0 && parseFloat(att.amount) > maxAllowed;
+                        return (
+                          <div className="input-group" style={{ marginBottom: 0 }}>
+                            <label style={{ fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600', color: isOverBudget ? 'var(--danger)' : 'var(--text-muted)' }}>Nominal (Rp)</label>
+                            <input
+                              type="number"
+                              placeholder="e.g., 150000"
+                              className="no-spin"
+                              value={att.amount || ''}
+                              onChange={(e) => onFieldChange(att.id, 'amount', e.target.value)}
+                              required
+                              disabled={isSubmitting}
+                              style={{ 
+                                padding: '0.45rem 0.5rem', 
+                                fontSize: '0.85rem', 
+                                borderRadius: '6px', 
+                                height: 'auto', 
+                                border: isOverBudget ? '1.5px solid var(--danger)' : '1px solid var(--border)',
+                                outlineColor: isOverBudget ? 'var(--danger)' : undefined
+                              }}
+                            />
+                            {isOverBudget && (
+                              <span style={{ fontSize: '0.65rem', color: 'var(--danger)', marginTop: '0.15rem', fontWeight: '700' }}>
+                                Max Rp {maxAllowed.toLocaleString('id-ID')} ({att.numberOfPersons || 1} Pax)
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Date */}
                       <div className="input-group" style={{ marginBottom: 0 }}>
