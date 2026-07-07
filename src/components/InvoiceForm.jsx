@@ -309,8 +309,10 @@ function InvoiceForm({
               fullName: fullName,
               email: email.toLowerCase(),
               phone: phone,
+              officeBranch: costCenter,
+              jobTitle: jobTitle,
               tripPurpose: e.target.tripPurpose.value,
-              description: `Office Branch: ${costCenter}, Job: ${jobTitle}. Receipts: ` + attachments.map(att => `${att.category} (${att.description})`).join(', '),
+              description: attachments.map(att => `${att.category} (${att.description || 'No description'})`).join(', '),
               invoiceDate: `${tripStartDate} to ${tripEndDate}`,
               totalAmount: totalAmount,
               attachments: [{ 
