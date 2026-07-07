@@ -13,6 +13,57 @@ const fileToBase64 = (file) => {
   });
 };
 
+// Compress image client-side to prevent Firestore size limit error
+const compressImage = (file) => {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      resolve(file);
+      return;
+    }
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const MAX_WIDTH = 1000;
+        const MAX_HEIGHT = 1000;
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const compressedFile = new File([blob], file.name, {
+            type: 'image/jpeg',
+            lastModified: Date.now()
+          });
+          resolve(compressedFile);
+        }, 'image/jpeg', 0.6);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
 // Budget configuration per person
 const BUDGETS = {
   'Lunch': 30000,
@@ -254,11 +305,17 @@ function InvoiceForm({
     }
 
     try {
-      // 1. Process files to Base64 strings
+      // 1. Process files to Base64 strings (with compression)
       const uploadPromises = attachments.map(async (att) => {
         let base64Url = att.url;
         if (att.url.startsWith('blob:')) {
-          base64Url = await fileToBase64(att.file);
+          try {
+            const compressedFile = await compressImage(att.file);
+            base64Url = await fileToBase64(compressedFile);
+          } catch (compErr) {
+            console.error("Compression error, using original file:", compErr);
+            base64Url = await fileToBase64(att.file);
+          }
         }
         
         return {
