@@ -533,8 +533,8 @@ input[type="number"].no-spin {
 /* Responsive Design for Mobile */
 @media (max-width: 640px) {
   body {
+    display: block !important;
     padding: 0;
-    align-items: flex-start;
     background: #f3f4f6;
     max-width: 100% !important;
     width: 100% !important;

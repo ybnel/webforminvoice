@@ -412,7 +412,7 @@ function InvoiceForm({
       case 'Pending': return { bg: '#fef3c7', text: '#d97706' };
       case 'Approved': return { bg: '#d1fae5', text: '#059669' };
       case 'Reimbursed': return { bg: '#dbeafe', text: '#2563eb' }; 
-      case 'Rejected': return { bg: '#fee2e2', text: '#dc2626' };ssssssss
+      case 'Rejected': return { bg: '#fee2e2', text: '#dc2626' };
       default: return { bg: '#f1f5f9', text: '#475569' };
     }
   };

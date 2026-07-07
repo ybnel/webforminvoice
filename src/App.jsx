@@ -272,7 +272,7 @@ function App() {
 
   // Render Employee Layout (No login required)
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
+    <div style={{ minHeight: '100vh', background: '#f8fafc', width: '100%' }}>
       <div style={{ display: isScannerOpen ? 'none' : 'block', padding: '1rem 0' }}>
         <InvoiceForm
           attachments={attachments}
