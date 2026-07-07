@@ -218,12 +218,13 @@ function InvoiceForm({
       const budgetPerPax = BUDGETS[category] || 0;
       
       if (budgetPerPax > 0) {
-        const maxAllowed = budgetPerPax * pax;
+        const isFood = category === 'Lunch' || category === 'Dinner';
+        const maxAllowed = isFood ? (budgetPerPax * pax) : budgetPerPax;
         if (amount > maxAllowed) {
           alert(
             `Budget Limit Exceeded!\n\n` +
             `Receipt #${i + 1} (${category}) exceeds the allowable budget.\n` +
-            `Maximum limit: Rp ${maxAllowed.toLocaleString('id-ID')} (${pax} Pax)\n` +
+            `Maximum limit: Rp ${maxAllowed.toLocaleString('id-ID')}${isFood ? ` (${pax} Pax)` : ''}\n` +
             `Your input: Rp ${amount.toLocaleString('id-ID')}\n\n` +
             `Please adjust the nominal amount to be within the allowable limit.`
           );
@@ -351,8 +352,8 @@ function InvoiceForm({
     switch (status) {
       case 'Pending': return { bg: '#fef3c7', text: '#d97706' };
       case 'Approved': return { bg: '#d1fae5', text: '#059669' };
-      case 'Reimbursed': return { bg: '#dbeafe', text: '#2563eb' };
-      case 'Rejected': return { bg: '#fee2e2', text: '#dc2626' };
+      case 'Reimbursed': return { bg: '#dbeafe', text: '#2563eb' }; 
+      case 'Rejected': return { bg: '#fee2e2', text: '#dc2626' };ssssssss
       default: return { bg: '#f1f5f9', text: '#475569' };
     }
   };
@@ -678,7 +679,10 @@ function InvoiceForm({
 
                       {/* Nominal Amount */}
                       {(() => {
-                        const maxAllowed = (BUDGETS[att.category] || 0) * (parseInt(att.numberOfPersons) || 1);
+                        const isFood = att.category === 'Lunch' || att.category === 'Dinner';
+                        const maxAllowed = isFood 
+                          ? ((BUDGETS[att.category] || 0) * (parseInt(att.numberOfPersons) || 1))
+                          : (BUDGETS[att.category] || 0);
                         const isOverBudget = BUDGETS[att.category] > 0 && parseFloat(att.amount) > maxAllowed;
                         return (
                           <div className="input-group" style={{ marginBottom: 0 }}>
@@ -702,7 +706,7 @@ function InvoiceForm({
                             />
                             {isOverBudget && (
                               <span style={{ fontSize: '0.65rem', color: 'var(--danger)', marginTop: '0.15rem', fontWeight: '700' }}>
-                                Max Rp {maxAllowed.toLocaleString('id-ID')} ({att.numberOfPersons || 1} Pax)
+                                Max Rp {maxAllowed.toLocaleString('id-ID')}{isFood ? ` (${att.numberOfPersons || 1} Pax)` : ''}
                               </span>
                             )}
                           </div>
@@ -936,6 +940,27 @@ function InvoiceForm({
           </div>
         </div>
       )}
+      {/* Footer Admin Link */}
+      <div style={{ textAlign: 'center', marginTop: '2.5rem', paddingBottom: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+        <a 
+          href="/?admin=true" 
+          style={{ 
+            fontSize: '0.8rem', 
+            color: 'var(--text-muted)', 
+            textDecoration: 'none', 
+            fontWeight: '600',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            opacity: 0.7,
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = 0.7}
+        >
+          <Landmark size={14} /> Open Admin Portal
+        </a>
+      </div>
     </div>
   );
 }

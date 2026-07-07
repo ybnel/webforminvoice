@@ -90,7 +90,7 @@ function AdminDashboard({ onSignOut }) {
       {/* Top Navbar */}
       <div style={{
         display: 'flex',
-        justifyContent: 'space-between',
+        justifyContent: 'space-between', 
         alignItems: 'center',
         background: 'white',
         border: '1px solid #e2e8f0',
@@ -111,7 +111,7 @@ function AdminDashboard({ onSignOut }) {
             RM
           </div>
           <span style={{ fontWeight: '800', color: '#1e293b', fontSize: '1.05rem' }}>
-            Reimbursement Admin Center
+            Admin Center
           </span>
         </div>
 
@@ -153,13 +153,6 @@ function AdminDashboard({ onSignOut }) {
           <div>
             <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>Total Reimbursed</span>
             <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Rp {reimbursedSum.toLocaleString('id-ID')}</h3>
-          </div>
-        </div>
-        <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.01)' }}>
-          <div style={{ background: '#dbeafe', color: '#2563eb', padding: '0.75rem', borderRadius: '12px' }}><DollarSign size={24} /></div>
-          <div>
-            <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>Overall Claims Pool</span>
-            <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>Rp {totalClaimedSum.toLocaleString('id-ID')}</h3>
           </div>
         </div>
       </div>
@@ -232,11 +225,7 @@ function AdminDashboard({ onSignOut }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: '600', color: '#475569' }}>
-                  <th style={{ padding: '0.85rem 1rem' }}>Employee Profile</th>
-                  <th style={{ padding: '0.85rem 1rem' }}>Trip Purpose</th>
-                  <th style={{ padding: '0.85rem 1rem' }}>Dates</th>
-                  <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Total Amount</th>
-                  <th style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>Receipts</th>
+                  <th style={{ padding: '0.85rem 1rem' }}>Employee Profile & Trip Details</th>
                   <th style={{ padding: '0.85rem 1rem', textAlign: 'center', minWidth: '160px' }}>Verify Claim</th>
                   <th style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>Portal</th>
                 </tr>
@@ -248,37 +237,20 @@ function AdminDashboard({ onSignOut }) {
 
                   return (
                     <tr key={claim.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      {/* Name & Job info */}
+                      {/* Name & Job info + Metadata aggregated */}
                       <td style={{ padding: '0.85rem 1rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontWeight: '700', color: '#1e293b' }}>{claim.fullName}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '0.95rem' }}>{claim.fullName}</span>
                           <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                             {claim.jobTitle || 'No Title'} &bull; <strong style={{ color: '#4f46e5' }}>{claim.costCenter || 'No Branch'}</strong>
                           </span>
+                          <span style={{ fontSize: '0.75rem', color: '#475569' }}>
+                            <strong>Purpose:</strong> {claim.tripPurpose} &bull; <strong>Total:</strong> <span style={{ fontWeight: '700', color: '#0f172a' }}>Rp {claim.totalAmount ? claim.totalAmount.toLocaleString('id-ID') : 0}</span>
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                            {claim.tripStartDate || 'No Date'} to {claim.tripEndDate || 'No Date'} &bull; ({claim.attachments ? claim.attachments.length : 0} items)
+                          </span>
                         </div>
-                      </td>
-
-                      {/* Purpose */}
-                      <td style={{ padding: '0.85rem 1rem', color: '#334155', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={claim.tripPurpose}>
-                        {claim.tripPurpose}
-                      </td>
-
-                      {/* Dates */}
-                      <td style={{ padding: '0.85rem 1rem', color: '#64748b' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span>{claim.tripStartDate || 'No Date'}</span>
-                          <span style={{ fontSize: '0.75rem' }}>to {claim.tripEndDate || 'No Date'}</span>
-                        </div>
-                      </td>
-
-                      {/* Amount */}
-                      <td style={{ padding: '0.85rem 1rem', textAlign: 'right', fontWeight: '800', color: '#1e293b', fontSize: '0.9rem' }}>
-                        Rp {claim.totalAmount ? claim.totalAmount.toLocaleString('id-ID') : 0}
-                      </td>
-
-                      {/* Receipts count */}
-                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center', color: '#64748b', fontWeight: '600' }}>
-                        {claim.attachments ? claim.attachments.length : 0} items
                       </td>
 
                       {/* Status changer buttons */}
