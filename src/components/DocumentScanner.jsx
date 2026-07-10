@@ -256,7 +256,6 @@ function DocumentScanner({
     if (!rawCapturedPhoto || !displayCorners || !scannerInstance) return;
 
     const img = new window.Image();
-    img.src = rawCapturedPhoto;
     img.onload = () => {
       try {
         const naturalWidth = img.naturalWidth;
@@ -290,6 +289,7 @@ function DocumentScanner({
         alert("Failed to crop image. Please try again.");
       }
     };
+    img.src = rawCapturedPhoto;
   };
 
   // Filter effect (OpenCV)
@@ -302,7 +302,6 @@ function DocumentScanner({
       if (window.cv && window.cv.Mat) {
         try {
           const img = new window.Image();
-          img.src = capturedImage;
           img.onload = () => {
             const src = window.cv.imread(img);
             const dst = new window.cv.Mat();
@@ -325,6 +324,7 @@ function DocumentScanner({
             src.delete();
             dst.delete();
           };
+          img.src = capturedImage;
         } catch (e) {
           console.error("OpenCV filter processing failed:", e);
           setFilteredImage(capturedImage);
