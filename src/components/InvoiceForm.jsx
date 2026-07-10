@@ -351,36 +351,35 @@ function InvoiceForm({
 
       console.log("Document saved with ID: ", docRef.id);
 
-      // 3. Send view portal link to Google Sheets via Webhook
+      // 3. Send view portal link to Google Sheets via Webhook (Non-blocking background call)
       const webhookUrl = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
       if (webhookUrl && webhookUrl !== 'YOUR_GOOGLE_SHEETS_WEBHOOK_URL' && webhookUrl.trim() !== '') {
-        setSubmitStatus('Logging claim to sheets database...');
-        try {
-          await fetch(webhookUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              fullName: fullName,
-              email: email.toLowerCase(),
-              phone: phone,
-              officeBranch: costCenter,
-              jobTitle: jobTitle,
-              tripPurpose: e.target.tripPurpose.value,
-              description: attachments.map(att => `${att.category} (${att.description || 'No description'})`).join(', '),
-              invoiceDate: `${tripStartDate} to ${tripEndDate}`,
-              totalAmount: totalAmount,
-              attachments: [{ 
-                category: 'Claim Portal Link', 
-                url: `${window.location.origin}/?view=${docRef.id}` 
-              }]
-            })
-          });
-        } catch (sheetError) {
-          console.error("Failed Google Sheets sync:", sheetError);
-        }
+        // Fire and forget: We do not await this since mode is 'no-cors'.
+        // This makes the submit instant while Google Sheets syncs in the background.
+        fetch(webhookUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            fullName: fullName,
+            email: email.toLowerCase(),
+            phone: phone,
+            officeBranch: costCenter,
+            jobTitle: jobTitle,
+            tripPurpose: e.target.tripPurpose.value,
+            description: attachments.map(att => `${att.category} (${att.description || 'No description'})`).join(', '),
+            invoiceDate: `${tripStartDate} to ${tripEndDate}`,
+            totalAmount: totalAmount,
+            attachments: [{ 
+              category: 'Claim Portal Link', 
+              url: `${window.location.origin}/?view=${docRef.id}` 
+            }]
+          })
+        }).catch(sheetError => {
+          console.error("Failed Google Sheets background sync:", sheetError);
+        });
       }
 
       alert(
