@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, UploadCloud, FileText, User, Camera, Image, Crop, Loader2, X, ExternalLink, Calendar, Landmark, Briefcase } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 
 // Helper function to read file as Base64 Data URL
 const fileToBase64 = (file) => {
@@ -76,6 +76,7 @@ const BUDGETS = {
 
 function InvoiceForm({
   attachments = [],
+  setAttachments,
   onOpenScanner,
   onFileChange,
   onOpenEditor,
@@ -105,6 +106,10 @@ function InvoiceForm({
   const [showDateModal, setShowDateModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [uploadAction, setUploadAction] = useState(null); // 'camera' | 'gallery'
+
+  const [editingDraftId, setEditingDraftId] = useState(null);
+  const [isDraftSubmit, setIsDraftSubmit] = useState(false);
+  const [tripPurpose, setTripPurpose] = useState('');
 
   const fileInputRef = useRef(null);
 
@@ -238,6 +243,64 @@ function InvoiceForm({
     onFieldChange(attId, 'numberOfPersons', paxVal);
   };
 
+  const handleLoadDraft = (claim) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setEditingDraftId(claim.id);
+    if (claim.fullName) setFullName(claim.fullName);
+    if (claim.email) setEmail(claim.email);
+    if (claim.phone) setPhone(claim.phone);
+    if (claim.costCenter) setCostCenter(claim.costCenter);
+    if (claim.jobTitle) setJobTitle(claim.jobTitle);
+    setTripPurpose(claim.tripPurpose || '');
+    setTripStartDate(claim.tripStartDate || '');
+    setTripEndDate(claim.tripEndDate || '');
+
+    const loadedAttachments = (claim.attachments || []).map((att, idx) => ({
+      id: att.id || Date.now() + idx,
+      name: att.name || `attachment_${idx}.jpg`,
+      size: att.size || 0,
+      category: att.category || '',
+      description: att.description || '',
+      invoiceDate: att.invoiceDate || '',
+      amount: att.amount || 0,
+      numberOfPersons: att.numberOfPersons || 1,
+      url: att.url
+    }));
+    setAttachments(loadedAttachments);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingDraftId(null);
+    setTripPurpose('');
+    setTripStartDate('');
+    setTripEndDate('');
+    onClearAttachments();
+  };
+
+  const handleDeleteDraft = async (claimId) => {
+    if (!window.confirm("Are you sure you want to delete this draft? This cannot be undone.")) {
+      return;
+    }
+    try {
+      setSubmitStatus('Deleting draft...');
+      setIsSubmitting(true);
+      await deleteDoc(doc(db, "reimbursements", claimId));
+      if (editingDraftId === claimId) {
+        handleCancelEdit();
+      }
+      if (email) {
+        await fetchUserHistory(email.trim().toLowerCase());
+      }
+      alert("Draft deleted successfully.");
+    } catch (err) {
+      console.error("Failed to delete draft:", err);
+      alert("Failed to delete draft. Error: " + err.message);
+    } finally {
+      setIsSubmitting(false);
+      setSubmitStatus('');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -333,66 +396,87 @@ function InvoiceForm({
       const uploadedFiles = await Promise.all(uploadPromises);
 
       // 2. Save structured record to Cloud Firestore
-      setSubmitStatus('Saving claim details to database...');
-      const docRef = await addDoc(collection(db, "reimbursements"), {
+      setSubmitStatus(isDraftSubmit ? 'Saving draft to database...' : 'Saving claim details to database...');
+      
+      const claimData = {
         fullName: fullName,
         email: email.toLowerCase(),
         phone: phone,
         costCenter: costCenter,
         jobTitle: jobTitle,
-        tripPurpose: e.target.tripPurpose.value,
+        tripPurpose: tripPurpose,
         tripStartDate: tripStartDate,
         tripEndDate: tripEndDate,
         totalAmount: totalAmount,
         attachments: uploadedFiles,
-        status: 'Pending', // initial status
-        createdAt: new Date()
-      });
+        status: isDraftSubmit ? 'Draft' : 'Pending',
+        updatedAt: new Date()
+      };
 
-      console.log("Document saved with ID: ", docRef.id);
-
-      // 3. Send view portal link to Google Sheets via Webhook (Non-blocking background call)
-      const webhookUrl = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
-      if (webhookUrl && webhookUrl !== 'YOUR_GOOGLE_SHEETS_WEBHOOK_URL' && webhookUrl.trim() !== '') {
-        // Fire and forget: We do not await this since mode is 'no-cors'.
-        // This makes the submit instant while Google Sheets syncs in the background.
-        fetch(webhookUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            fullName: fullName,
-            email: email.toLowerCase(),
-            phone: phone,
-            officeBranch: costCenter,
-            jobTitle: jobTitle,
-            tripPurpose: e.target.tripPurpose.value,
-            description: attachments.map(att => `${att.category} (${att.description || 'No description'})`).join(', '),
-            invoiceDate: `${tripStartDate} to ${tripEndDate}`,
-            totalAmount: totalAmount,
-            attachments: [{ 
-              category: 'Claim Portal Link', 
-              url: `${window.location.origin}/?view=${docRef.id}` 
-            }]
-          })
-        }).catch(sheetError => {
-          console.error("Failed Google Sheets background sync:", sheetError);
+      let docId = editingDraftId;
+      if (editingDraftId) {
+        const docRef = doc(db, "reimbursements", editingDraftId);
+        await setDoc(docRef, claimData, { merge: true });
+        console.log("Document updated with ID: ", editingDraftId);
+      } else {
+        const docRef = await addDoc(collection(db, "reimbursements"), {
+          ...claimData,
+          createdAt: new Date()
         });
+        docId = docRef.id;
+        console.log("Document saved with ID: ", docId);
       }
 
-      alert(
-        'Reimbursement claim successfully submitted!\n' +
-        `Total Claimed: Rp ${totalAmount.toLocaleString('id-ID')}\n` +
-        `Claim status is now Pending verification.`
-      );
+      // 3. Send view portal link to Google Sheets via Webhook (Non-blocking background call - ONLY on final submit)
+      if (!isDraftSubmit) {
+        const webhookUrl = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
+        if (webhookUrl && webhookUrl !== 'YOUR_GOOGLE_SHEETS_WEBHOOK_URL' && webhookUrl.trim() !== '') {
+          fetch(webhookUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              fullName: fullName,
+              email: email.toLowerCase(),
+              phone: phone,
+              officeBranch: costCenter,
+              jobTitle: jobTitle,
+              tripPurpose: tripPurpose,
+              description: attachments.map(att => `${att.category} (${att.description || 'No description'})`).join(', '),
+              invoiceDate: `${tripStartDate} to ${tripEndDate}`,
+              totalAmount: totalAmount,
+              attachments: [{ 
+                category: 'Claim Portal Link', 
+                url: `${window.location.origin}/?view=${docId}` 
+              }]
+            })
+          }).catch(sheetError => {
+            console.error("Failed Google Sheets background sync:", sheetError);
+          });
+        }
+      }
+
+      if (isDraftSubmit) {
+        alert(
+          'Draft successfully saved!\n' +
+          `You can reload and edit this draft later from My Claims History.`
+        );
+      } else {
+        alert(
+          'Reimbursement claim successfully submitted!\n' +
+          `Total Claimed: Rp ${totalAmount.toLocaleString('id-ID')}\n` +
+          `Claim status is now Pending verification.`
+        );
+      }
 
       // Reset form and local attachment states
-      e.target.tripPurpose.value = '';
+      setTripPurpose('');
       setTripStartDate('');
       setTripEndDate('');
       onClearAttachments();
+      setEditingDraftId(null);
       
       // Refresh claims history list
       fetchUserHistory(email.trim().toLowerCase());
@@ -408,6 +492,7 @@ function InvoiceForm({
 
   const getStatusBadgeColor = (status) => {
     switch (status) {
+      case 'Draft': return { bg: '#e0f2fe', text: '#0369a1' };
       case 'Pending': return { bg: '#fef3c7', text: '#d97706' };
       case 'Approved': return { bg: '#d1fae5', text: '#059669' };
       case 'Reimbursed': return { bg: '#dbeafe', text: '#2563eb' }; 
@@ -437,6 +522,39 @@ function InvoiceForm({
           <p style={{ fontWeight: '600', color: 'var(--text-main)', textAlign: 'center', padding: '0 1rem' }}>
             {submitStatus}
           </p>
+        </div>
+      )}
+
+      {/* Draft Edit Active Banner */}
+      {editingDraftId && (
+        <div style={{
+          background: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '12px',
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>✏️</span>
+            <div style={{ textAlign: 'left' }}>
+              <strong style={{ color: '#1e40af', fontSize: '0.9rem' }}>Mode Edit Draft Aktif</strong>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#1e3a8a', opacity: 0.85 }}>
+                Mengedit pengajuan: <strong>{tripPurpose || 'Tanpa Judul'}</strong>
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleCancelEdit}
+            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', margin: 0, width: 'auto', background: '#dbeafe', color: '#1e40af' }}
+          >
+            Batal Edit
+          </button>
         </div>
       )}
 
@@ -556,6 +674,8 @@ function InvoiceForm({
               name="tripPurpose" 
               type="text" 
               placeholder="e.g., Tech conference in Jakarta / Client visit to Bali" 
+              value={tripPurpose}
+              onChange={(e) => setTripPurpose(e.target.value)}
               required 
               disabled={isSubmitting} 
             />
@@ -828,9 +948,26 @@ function InvoiceForm({
           </div>
         </div>
 
-        <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ marginTop: '1rem' }}>
-          Submit Claim Form
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+          <button 
+            type="submit" 
+            className="btn btn-secondary" 
+            disabled={isSubmitting} 
+            onClick={() => setIsDraftSubmit(true)}
+            style={{ flex: 1, padding: '0.85rem', fontSize: '1rem', fontWeight: '700' }}
+          >
+            {editingDraftId ? '💾 Update Draft' : '📝 Save as Draft'}
+          </button>
+          <button 
+            type="submit" 
+            className="btn btn-primary" 
+            disabled={isSubmitting} 
+            onClick={() => setIsDraftSubmit(false)}
+            style={{ flex: 1, padding: '0.85rem', fontSize: '1rem', fontWeight: '700', marginTop: 0 }}
+          >
+            {editingDraftId ? '🚀 Final Submit Claim' : '✈️ Submit Claim Form'}
+          </button>
+        </div>
       </form>
 
       {/* History Log Section */}
@@ -900,23 +1037,66 @@ function InvoiceForm({
                         </span>
                       </td>
                       <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
-                        <a 
-                          href={`/?view=${claim.id}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          style={{
-                            color: 'var(--primary)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.2rem',
-                            fontWeight: '600',
-                            textDecoration: 'none'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
-                          onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
-                        >
-                          View <ExternalLink size={12} />
-                        </a>
+                        {claim.status === 'Draft' ? (
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleLoadDraft(claim)}
+                              style={{
+                                background: '#e0e7ff',
+                                color: '#4f46e5',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '0.35rem 0.6rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.2rem'
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDraft(claim.id)}
+                              style={{
+                                background: '#fee2e2',
+                                color: '#dc2626',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '0.35rem 0.6rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.2rem'
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ) : (
+                          <a 
+                            href={`/?view=${claim.id}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{
+                              color: 'var(--primary)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.2rem',
+                              fontWeight: '600',
+                              textDecoration: 'none'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                            onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                          >
+                            View <ExternalLink size={12} />
+                          </a>
+                        )}
                       </td>
                     </tr>
                   );

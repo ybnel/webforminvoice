@@ -276,6 +276,7 @@ function App() {
       <div style={{ display: isScannerOpen ? 'none' : 'block', padding: '1rem 0' }}>
         <InvoiceForm
           attachments={attachments}
+          setAttachments={setAttachments}
           onOpenScanner={handleOpenScanner}
           onFileChange={handleFileChange}
           onOpenEditor={handleOpenEditorForAttachment}

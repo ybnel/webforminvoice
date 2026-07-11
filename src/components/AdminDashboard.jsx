@@ -15,7 +15,9 @@ function AdminDashboard({ onSignOut }) {
     const unsub = onSnapshot(collection(db, "reimbursements"), (snapshot) => {
       const allClaims = [];
       snapshot.forEach((doc) => {
-        allClaims.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        if (data.status === 'Draft') return; // Skip draft claims
+        allClaims.push({ id: doc.id, ...data });
       });
 
       // Sort by creation date desc
