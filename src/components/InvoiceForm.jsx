@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, UploadCloud, FileText, User, Camera, Image, Crop, Loader2, X, ExternalLink, Calendar, Landmark, Briefcase } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, query, where, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import Logo from './Logo';
 
 // Helper function to read file as Base64 Data URL
 const fileToBase64 = (file) => {
@@ -559,7 +560,10 @@ function InvoiceForm({
       )}
 
       <div className="header">
-        <h1>Expense Reimbursement Form</h1>
+        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
+          <Logo size={42} />
+          <h1 style={{ margin: 0 }}>Expense Reimbursement Form</h1>
+        </div>
         <p>Complete your personal profile and claim details below</p>
       </div>
 

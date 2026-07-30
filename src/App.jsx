@@ -3,6 +3,7 @@ import InvoiceForm from './components/InvoiceForm';
 import DocumentScanner from './components/DocumentScanner';
 import ReceiptViewer from './components/ReceiptViewer';
 import AdminDashboard from './components/AdminDashboard';
+import Logo from './components/Logo';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 
 const ADMIN_PIN = '1234'; // Default PIN to access Admin Dashboard
@@ -188,15 +189,14 @@ function App() {
             gap: '1.5rem'
           }}>
             <div style={{
-              background: 'rgba(79, 70, 229, 0.1)',
-              color: 'var(--primary, #4f46e5)',
+              background: 'rgba(79, 70, 229, 0.08)',
               padding: '1rem',
               borderRadius: '50%',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <ShieldCheck size={36} />
+              <Logo size={48} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>

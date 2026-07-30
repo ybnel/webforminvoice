@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { Search, Loader2, FileText, CheckCircle, XCircle, DollarSign, Clock, ExternalLink, LogOut, Landmark } from 'lucide-react';
+import Logo from './Logo';
 
 function AdminDashboard({ onSignOut }) {
   const [claims, setClaims] = useState([]);
@@ -101,17 +102,8 @@ function AdminDashboard({ onSignOut }) {
         marginBottom: '2rem',
         boxShadow: '0 4px 6px -1px rgba(0,0,0,0.01)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
-            color: 'white',
-            padding: '0.4rem 0.5rem',
-            borderRadius: '8px',
-            fontWeight: '800',
-            fontSize: '0.85rem'
-          }}>
-            RM
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <Logo size={32} />
           <span style={{ fontWeight: '800', color: '#1e293b', fontSize: '1.05rem' }}>
             Admin Center
           </span>
