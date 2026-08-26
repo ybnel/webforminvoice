@@ -1,21 +1,57 @@
 /**
  * High-performance client-side image compressor for invoice & receipt images.
- * Uses native Canvas and ObjectURLs to prevent high RAM spikes and long blocking times.
+ * Guaranteed to NEVER hang (includes a 2500ms safety timeout and automatic FileReader fallback).
  */
+
+export const fallbackFileReader = (file) => {
+  return new Promise((resolve) => {
+    if (!file || !(file instanceof Blob || file instanceof File)) {
+      resolve(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+};
 
 export const compressImageFile = (file, maxWidth = 900, maxHeight = 900, quality = 0.55) => {
   return new Promise((resolve) => {
-    if (!file || !file.type || !file.type.startsWith('image/')) {
-      resolve({ file, base64Url: null, size: file ? file.size : 0 });
+    if (!file || !(file instanceof Blob || file instanceof File)) {
+      resolve({ file, base64Url: null, size: file?.size || 0 });
       return;
     }
+
+    let isResolved = false;
+    const safeResolve = (result) => {
+      if (!isResolved) {
+        isResolved = true;
+        clearTimeout(timer);
+        resolve(result);
+      }
+    };
+
+    // Safety timeout: if Image/Canvas doesn't finish in 2500ms, use FileReader fallback
+    const timer = setTimeout(() => {
+      console.warn("Image compression timed out, using fallback reader for:", file.name || 'file');
+      fallbackFileReader(file).then((b64) => {
+        safeResolve({ file, base64Url: b64, size: file.size });
+      }).catch(() => {
+        safeResolve({ file, base64Url: null, size: file.size });
+      });
+    }, 2500);
 
     let objectUrl = null;
     try {
       objectUrl = URL.createObjectURL(file);
     } catch (e) {
-      console.warn("Could not create object URL:", e);
-      resolve({ file, base64Url: null, size: file.size });
+      console.warn("Could not create object URL, using fallback reader:", e);
+      fallbackFileReader(file).then((b64) => {
+        safeResolve({ file, base64Url: b64, size: file.size });
+      }).catch(() => {
+        safeResolve({ file, base64Url: null, size: file.size });
+      });
       return;
     }
 
@@ -23,11 +59,18 @@ export const compressImageFile = (file, maxWidth = 900, maxHeight = 900, quality
 
     img.onload = () => {
       if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
+        try { URL.revokeObjectURL(objectUrl); } catch (_) {}
       }
       try {
         let width = img.naturalWidth || img.width;
         let height = img.naturalHeight || img.height;
+
+        if (!width || !height) {
+          fallbackFileReader(file).then((b64) => {
+            safeResolve({ file, base64Url: b64, size: file.size });
+          });
+          return;
+        }
 
         if (width > height) {
           if (width > maxWidth) {
@@ -46,7 +89,7 @@ export const compressImageFile = (file, maxWidth = 900, maxHeight = 900, quality
         canvas.height = height;
         const ctx = canvas.getContext('2d', { alpha: false });
         
-        // Fill white background in case of transparent PNG
+        // Fill white background in case of transparent PNG/screenshot
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
@@ -60,13 +103,13 @@ export const compressImageFile = (file, maxWidth = 900, maxHeight = 900, quality
               type: 'image/jpeg',
               lastModified: Date.now()
             });
-            resolve({
+            safeResolve({
               file: compressedFile,
               base64Url: dataUrl,
               size: compressedFile.size
             });
           } else {
-            resolve({
+            safeResolve({
               file: file,
               base64Url: dataUrl,
               size: file.size
@@ -74,17 +117,25 @@ export const compressImageFile = (file, maxWidth = 900, maxHeight = 900, quality
           }
         }, 'image/jpeg', quality);
       } catch (err) {
-        console.error("Image canvas compression error:", err);
-        resolve({ file, base64Url: null, size: file.size });
+        console.error("Image canvas compression error, fallback to reader:", err);
+        fallbackFileReader(file).then((b64) => {
+          safeResolve({ file, base64Url: b64, size: file.size });
+        }).catch(() => {
+          safeResolve({ file, base64Url: null, size: file.size });
+        });
       }
     };
 
     img.onerror = (err) => {
       if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
+        try { URL.revokeObjectURL(objectUrl); } catch (_) {}
       }
-      console.warn("Image load failed for compression:", err);
-      resolve({ file, base64Url: null, size: file.size });
+      console.warn("Image load failed, fallback to reader:", err);
+      fallbackFileReader(file).then((b64) => {
+        safeResolve({ file, base64Url: b64, size: file.size });
+      }).catch(() => {
+        safeResolve({ file, base64Url: null, size: file.size });
+      });
     };
 
     img.src = objectUrl;

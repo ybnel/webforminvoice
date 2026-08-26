@@ -90,7 +90,7 @@ function App() {
 
   const handleFileChange = (e, defaultDate = '') => {
     const files = Array.from(e.target.files);
-    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+    const imageFiles = files.filter(f => (f.type && f.type.startsWith('image/')) || (f.name && f.name.match(/\.(png|jpe?g|webp|bmp|gif|heic|heif)$/i)));
     if (imageFiles.length === 0) return;
 
     if (attachments.length + imageFiles.length > 15) {

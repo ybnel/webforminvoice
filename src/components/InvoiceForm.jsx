@@ -316,29 +316,36 @@ function InvoiceForm({
         let fileSize = att.size;
         let fileName = att.name;
 
-        // If file is still a local blob URL, compress it now
+        // If file is still a local blob URL, convert/compress to Base64 now
         if (att.url && att.url.startsWith('blob:')) {
           try {
-            const comp = await compressImageFile(att.file);
-            base64Url = comp.base64Url || att.url;
-            fileSize = comp.size || att.size;
-            if (comp.file && comp.file.name) {
+            let fileObj = att.file;
+            if (!fileObj) {
+              const res = await fetch(att.url);
+              fileObj = await res.blob();
+            }
+            const comp = await compressImageFile(fileObj);
+            if (comp && comp.base64Url) {
+              base64Url = comp.base64Url;
+              fileSize = comp.size || att.size;
+            }
+            if (comp && comp.file && comp.file.name) {
               fileName = comp.file.name;
             }
           } catch (compErr) {
-            console.error("Compression error, using original file:", compErr);
+            console.error("Compression error during submit:", compErr);
           }
         }
         
         return {
-          name: fileName,
-          size: fileSize,
-          category: att.category,
-          description: att.description,
-          invoiceDate: att.invoiceDate,
+          name: fileName || 'receipt.jpg',
+          size: fileSize || 0,
+          category: att.category || '',
+          description: att.description || '',
+          invoiceDate: att.invoiceDate || '',
           amount: parseFloat(att.amount) || 0,
           numberOfPersons: parseInt(att.numberOfPersons) || 1,
-          url: base64Url
+          url: base64Url || ''
         };
       });
 

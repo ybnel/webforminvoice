@@ -21,6 +21,7 @@ function DocumentScanner({
 
   const [currentFile, setCurrentFile] = useState(null);
   const [localQueue, setLocalQueue] = useState([]);
+  const [isBatchAttaching, setIsBatchAttaching] = useState(false);
 
   // Refs for video & canvas
   const videoRef = useRef(null);
@@ -405,6 +406,37 @@ function DocumentScanner({
     processNextInQueue();
   };
 
+  const handleAttachAllDirectly = async () => {
+    if (!currentFile) return;
+    setIsBatchAttaching(true);
+
+    const allFiles = [currentFile, ...localQueue];
+    for (let i = 0; i < allFiles.length; i++) {
+      const f = allFiles[i];
+      try {
+        const { file: compressedFile, base64Url, size } = await compressImageFile(f);
+        onSaveScan({
+          id: Date.now() + i,
+          file: compressedFile || f,
+          url: base64Url || (f === currentFile ? rawCapturedPhoto : URL.createObjectURL(f)),
+          name: compressedFile ? compressedFile.name : f.name,
+          size: size || f.size
+        });
+      } catch (err) {
+        console.error("Error batch attaching file:", err);
+      }
+    }
+
+    if (rawCapturedPhoto && rawCapturedPhoto.startsWith('blob:')) {
+      URL.revokeObjectURL(rawCapturedPhoto);
+    }
+
+    setCurrentFile(null);
+    setLocalQueue([]);
+    setIsBatchAttaching(false);
+    onClose();
+  };
+
   const handleSkipOrCancelUpload = () => {
     if (rawCapturedPhoto && rawCapturedPhoto.startsWith('blob:')) {
       URL.revokeObjectURL(rawCapturedPhoto);
@@ -571,6 +603,7 @@ function DocumentScanner({
               type="button"
               className="btn btn-secondary"
               onClick={handleSkipOrCancelUpload}
+              disabled={isBatchAttaching}
             >
               <X size={16} /> Cancel
             </button>
@@ -578,16 +611,45 @@ function DocumentScanner({
               type="button"
               className="btn btn-secondary"
               onClick={() => setScanStep('cropping')}
+              disabled={isBatchAttaching}
             >
               <RefreshCw size={16} /> Crop & Adjust
             </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleAttachDirectly}
-            >
-              <Check size={16} /> Attach Directly
-            </button>
+            {localQueue.length > 0 ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleAttachDirectly}
+                  disabled={isBatchAttaching}
+                >
+                  <Check size={16} /> Attach This 1
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleAttachAllDirectly}
+                  disabled={isBatchAttaching}
+                  style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)' }}
+                >
+                  {isBatchAttaching ? (
+                    <Loader2 className="scanner-spinner" size={16} />
+                  ) : (
+                    <Check size={16} />
+                  )}
+                  Attach All ({localQueue.length + 1})
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleAttachDirectly}
+                disabled={isBatchAttaching}
+              >
+                <Check size={16} /> Attach Directly
+              </button>
+            )}
           </>
         ) : scanStep === 'cropping' ? (
           <>
