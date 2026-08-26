@@ -18,6 +18,8 @@ function DocumentScanner({
   const [capturedImage, setCapturedImage] = useState(null); // Cropped image (Data URL)
   const [filteredImage, setFilteredImage] = useState(null); // Filtered cropped image (Data URL)
   const [filterType, setFilterType] = useState('color'); // 'color' | 'bw'
+  const [confirmFilterType, setConfirmFilterType] = useState('color'); // 'color' | 'bw'
+  const [confirmPreviewUrl, setConfirmPreviewUrl] = useState(null);
 
   const [currentFile, setCurrentFile] = useState(null);
   const [localQueue, setLocalQueue] = useState([]);
@@ -374,11 +376,28 @@ function DocumentScanner({
     }
   };
 
+  const handleConfirmFilterChange = async (type) => {
+    setConfirmFilterType(type);
+    if (!currentFile && !rawCapturedPhoto) return;
+    if (type === 'color') {
+      setConfirmPreviewUrl(null);
+    } else {
+      try {
+        const { base64Url } = await compressImageFile(currentFile || rawCapturedPhoto, 900, 900, 0.55, 'bw');
+        if (base64Url) {
+          setConfirmPreviewUrl(base64Url);
+        }
+      } catch (err) {
+        console.warn("Could not generate BW preview:", err);
+      }
+    }
+  };
+
   const handleAttachDirectly = async () => {
     if (!currentFile || !rawCapturedPhoto) return;
 
     try {
-      const { file: compressedFile, base64Url, size } = await compressImageFile(currentFile);
+      const { file: compressedFile, base64Url, size } = await compressImageFile(currentFile, 900, 900, 0.55, confirmFilterType);
       
       if (rawCapturedPhoto && rawCapturedPhoto.startsWith('blob:')) {
         URL.revokeObjectURL(rawCapturedPhoto);
@@ -403,6 +422,8 @@ function DocumentScanner({
     }
 
     setCurrentFile(null);
+    setConfirmFilterType('color');
+    setConfirmPreviewUrl(null);
     processNextInQueue();
   };
 
@@ -414,7 +435,7 @@ function DocumentScanner({
     for (let i = 0; i < allFiles.length; i++) {
       const f = allFiles[i];
       try {
-        const { file: compressedFile, base64Url, size } = await compressImageFile(f);
+        const { file: compressedFile, base64Url, size } = await compressImageFile(f, 900, 900, 0.55, confirmFilterType);
         onSaveScan({
           id: Date.now() + i,
           file: compressedFile || f,
@@ -433,6 +454,8 @@ function DocumentScanner({
 
     setCurrentFile(null);
     setLocalQueue([]);
+    setConfirmFilterType('color');
+    setConfirmPreviewUrl(null);
     setIsBatchAttaching(false);
     onClose();
   };
@@ -442,6 +465,8 @@ function DocumentScanner({
       URL.revokeObjectURL(rawCapturedPhoto);
     }
     setCurrentFile(null);
+    setConfirmFilterType('color');
+    setConfirmPreviewUrl(null);
     processNextInQueue();
   };
 
@@ -478,14 +503,37 @@ function DocumentScanner({
 
         {scanStep === 'confirm_upload' && (
           <div className="scanner-step-container">
-            <div className="scanner-status-toast" style={{ position: 'relative', top: 'auto', marginBottom: '1rem' }}>
+            <div className="scanner-status-toast" style={{ position: 'relative', top: 'auto', marginBottom: '0.75rem' }}>
               Confirm Attachment
             </div>
             {rawCapturedPhoto ? (
-              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-                <img src={rawCapturedPhoto} className="scan-preview" alt="Attachment preview" />
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.65rem' }}>
+                <img src={confirmPreviewUrl || rawCapturedPhoto} className="scan-preview" alt="Attachment preview" />
+                
+                {/* Filter Selector (Color vs B&W) */}
+                <div className="filter-group" style={{ margin: '0.2rem 0' }}>
+                  <button
+                    type="button"
+                    className={`btn ${confirmFilterType === 'color' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => handleConfirmFilterChange('color')}
+                    style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', fontWeight: '600' }}
+                  >
+                    <Sparkles size={14} style={{ display: 'inline', marginRight: '0.25rem' }} />
+                    Warna Asli (Color)
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn ${confirmFilterType === 'bw' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => handleConfirmFilterChange('bw')}
+                    style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', fontWeight: '600' }}
+                  >
+                    <FileText size={14} style={{ display: 'inline', marginRight: '0.25rem' }} />
+                    Hitam Putih (B&W)
+                  </button>
+                </div>
+
                 {currentFile && (
-                  <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-main)', background: '#fff', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', maxWidth: '90%', wordBreak: 'break-all' }}>
+                  <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-main)', background: '#fff', padding: '0.45rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', maxWidth: '90%', wordBreak: 'break-all' }}>
                     <strong>{currentFile.name}</strong> ({(currentFile.size / 1024).toFixed(1)} KB)
                   </div>
                 )}

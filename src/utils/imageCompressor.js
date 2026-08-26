@@ -1,5 +1,5 @@
 /**
- * High-performance client-side image compressor for invoice & receipt images.
+ * High-performance client-side image compressor and filter engine for invoice & receipt images.
  * Guaranteed to NEVER hang (includes a 2500ms safety timeout and automatic FileReader fallback).
  */
 
@@ -16,7 +16,7 @@ export const fallbackFileReader = (file) => {
   });
 };
 
-export const compressImageFile = (file, maxWidth = 900, maxHeight = 900, quality = 0.55) => {
+export const compressImageFile = (file, maxWidth = 900, maxHeight = 900, quality = 0.55, filterType = 'color') => {
   return new Promise((resolve) => {
     if (!file || !(file instanceof Blob || file instanceof File)) {
       resolve({ file, base64Url: null, size: file?.size || 0 });
@@ -87,12 +87,33 @@ export const compressImageFile = (file, maxWidth = 900, maxHeight = 900, quality
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext('2d', { alpha: false });
+        const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: filterType === 'bw' });
         
         // Fill white background in case of transparent PNG/screenshot
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
+
+        // Apply high-contrast B&W document filter if requested
+        if (filterType === 'bw') {
+          try {
+            const imgData = ctx.getImageData(0, 0, width, height);
+            const data = imgData.data;
+            const contrast = 1.35;
+            const factor = (259 * (contrast * 100 + 255)) / (255 * (259 - contrast * 100));
+            
+            for (let i = 0; i < data.length; i += 4) {
+              const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+              const enhanced = Math.min(255, Math.max(0, factor * (gray - 128) + 128));
+              data[i] = enhanced;
+              data[i + 1] = enhanced;
+              data[i + 2] = enhanced;
+            }
+            ctx.putImageData(imgData, 0, 0);
+          } catch (filterErr) {
+            console.warn("BW pixel manipulation fallback:", filterErr);
+          }
+        }
 
         const dataUrl = canvas.toDataURL('image/jpeg', quality);
 
