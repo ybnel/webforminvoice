@@ -1,15 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, FileText, Loader2, Sparkles, X, RefreshCw, Check } from 'lucide-react';
-
-// Helper to convert Data URL (base64) to a File object
-const dataURLtoFile = (dataurl, filename) => {
-  let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-    bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-  while (n--) {
-    u8arr[n] = bstr.charCodeAt(n);
-  }
-  return new File([u8arr], filename, { type: mime });
-};
+import { compressImageFile, dataURLtoFile } from '../utils/imageCompressor';
 
 function DocumentScanner({
   initialQueue = [],
@@ -382,16 +373,34 @@ function DocumentScanner({
     }
   };
 
-  const handleAttachDirectly = () => {
+  const handleAttachDirectly = async () => {
     if (!currentFile || !rawCapturedPhoto) return;
 
-    onSaveScan({
-      id: Date.now(),
-      file: currentFile,
-      url: rawCapturedPhoto,
-      name: currentFile.name,
-      size: currentFile.size
-    });
+    try {
+      const { file: compressedFile, base64Url, size } = await compressImageFile(currentFile);
+      
+      if (rawCapturedPhoto && rawCapturedPhoto.startsWith('blob:')) {
+        URL.revokeObjectURL(rawCapturedPhoto);
+      }
+
+      onSaveScan({
+        id: Date.now(),
+        file: compressedFile || currentFile,
+        url: base64Url || rawCapturedPhoto,
+        name: compressedFile ? compressedFile.name : currentFile.name,
+        size: size || currentFile.size
+      });
+    } catch (e) {
+      console.warn("Direct attach compression error:", e);
+      onSaveScan({
+        id: Date.now(),
+        file: currentFile,
+        url: rawCapturedPhoto,
+        name: currentFile.name,
+        size: currentFile.size
+      });
+    }
+
     setCurrentFile(null);
     processNextInQueue();
   };
