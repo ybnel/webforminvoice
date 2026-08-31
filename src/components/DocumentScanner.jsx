@@ -510,25 +510,23 @@ function DocumentScanner({
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.65rem' }}>
                 <img src={confirmPreviewUrl || rawCapturedPhoto} className="scan-preview" alt="Attachment preview" />
                 
-                {/* Filter Selector (Color vs B&W) */}
-                <div className="filter-group" style={{ margin: '0.2rem 0' }}>
+                {/* Filter controls */}
+                <div className="filter-group">
                   <button
                     type="button"
-                    className={`btn ${confirmFilterType === 'color' ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`filter-btn ${confirmFilterType === 'color' ? 'active' : ''}`}
                     onClick={() => handleConfirmFilterChange('color')}
-                    style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', fontWeight: '600' }}
                   >
-                    <Sparkles size={14} style={{ display: 'inline', marginRight: '0.25rem' }} />
-                    Warna Asli (Color)
+                    <Sparkles size={16} style={{ display: 'inline', marginRight: '0.25rem' }} />
+                    Original Color
                   </button>
                   <button
                     type="button"
-                    className={`btn ${confirmFilterType === 'bw' ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`filter-btn ${confirmFilterType === 'bw' ? 'active' : ''}`}
                     onClick={() => handleConfirmFilterChange('bw')}
-                    style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', fontWeight: '600' }}
                   >
-                    <FileText size={14} style={{ display: 'inline', marginRight: '0.25rem' }} />
-                    Hitam Putih (B&W)
+                    <FileText size={16} style={{ display: 'inline', marginRight: '0.25rem' }} />
+                    Scan (B&W Filter)
                   </button>
                 </div>
 
