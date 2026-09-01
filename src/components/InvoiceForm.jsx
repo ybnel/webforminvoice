@@ -6,12 +6,12 @@ import Logo from './Logo';
 
 import { compressImageFile } from '../utils/imageCompressor';
 
-// Budget configuration per person
+// Budget configuration per person (0 = Unlimited Budget)
 const BUDGETS = {
   'Lunch': 30000,
   'Dinner': 50000,
-  'Transport (Departure)': 150000,
-  'Transport (Return)': 150000,
+  'Transport (Departure)': 0,
+  'Transport (Return)': 0,
   'Ticket': 0,
   'Others': 0
 };
