@@ -329,7 +329,7 @@ function InvoiceForm({
               base64Url = comp.base64Url;
               fileSize = comp.size || att.size;
             }
-            if (comp && comp.file && comp.file.name) {
+            if (comp && comp.file && comp.file.name) {1
               fileName = comp.file.name;
             }
           } catch (compErr) {
@@ -731,12 +731,12 @@ function InvoiceForm({
                   disabled={isSubmitting}
                 >
                   <Image size={24} style={{ margin: '0 auto' }} />
-                  <span>Choose Gallery</span>
+                  <span>Choose Gallery / PDF</span>
                 </button>
 
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,application/pdf,.pdf"
                   multiple
                   ref={fileInputRef}
                   style={{ display: 'none' }}

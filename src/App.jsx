@@ -6,6 +6,8 @@ import AdminDashboard from './components/AdminDashboard';
 import Logo from './components/Logo';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 
+import { processIncomingUploadFiles } from './utils/pdfConverter';
+
 const ADMIN_PIN = '1234'; // Default PIN to access Admin Dashboard
 
 function App() {
@@ -23,11 +25,11 @@ function App() {
 
   // Detect URL parameter and verify admin session on mount / URL change
   useEffect(() => {
-    const checkRoute = () => {
+    const checkParams = () => {
       const urlParams = new URLSearchParams(window.location.search);
-      const viewId = urlParams.get('view');
+      const viewId = urlParams.get('view') || urlParams.get('doc');
       const adminParam = urlParams.get('admin');
-
+      
       if (viewId) {
         setViewDocumentId(viewId);
       } else {
@@ -40,24 +42,20 @@ function App() {
         setIsAdminAuthenticated(sessionAuth);
       } else {
         setIsAdminPage(false);
-        setIsAdminAuthenticated(false);
       }
     };
 
-    checkRoute();
-    // Listen to history changes (back button etc.)
-    window.addEventListener('popstate', checkRoute);
-    return () => window.removeEventListener('popstate', checkRoute);
+    checkParams();
+    window.addEventListener('popstate', checkParams);
+    return () => window.removeEventListener('popstate', checkParams);
   }, []);
 
   const handleAdminVerifyPin = (e) => {
     e.preventDefault();
-    setPinError('');
-
     if (pinInput === ADMIN_PIN) {
       sessionStorage.setItem('admin_authenticated', 'true');
       setIsAdminAuthenticated(true);
-      setPinInput('');
+      setPinError('');
     } else {
       setPinError('Incorrect PIN. Please try again.');
       setPinInput('');
@@ -67,8 +65,9 @@ function App() {
   const handleAdminSignOut = () => {
     sessionStorage.removeItem('admin_authenticated');
     setIsAdminAuthenticated(false);
-    // Clear URL parameters
-    window.history.pushState({}, '', window.location.pathname);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('admin');
+    window.history.pushState({}, '', url);
     setIsAdminPage(false);
   };
 
@@ -88,20 +87,38 @@ function App() {
     setIsScannerOpen(true);
   };  
 
-  const handleFileChange = (e, defaultDate = '') => {
-    const files = Array.from(e.target.files);
-    const imageFiles = files.filter(f => (f.type && f.type.startsWith('image/')) || (f.name && f.name.match(/\.(png|jpe?g|webp|bmp|gif|heic|heif)$/i)));
-    if (imageFiles.length === 0) return;
+  const handleFileChange = async (e, defaultDate = '') => {
+    const rawFiles = Array.from(e.target.files);
+    if (rawFiles.length === 0) return;
 
-    if (attachments.length + imageFiles.length > 15) {
-      alert(`Maximum attachments limit is 15. You tried to add ${imageFiles.length} photos, but you already have ${attachments.length} attached.`);
+    // Filter valid files (images + PDFs)
+    const validFiles = rawFiles.filter(f => 
+      (f.type && (f.type.startsWith('image/') || f.type === 'application/pdf')) || 
+      (f.name && f.name.match(/\.(png|jpe?g|webp|bmp|gif|heic|heif|pdf)$/i))
+    );
+
+    if (validFiles.length === 0) return;
+
+    // Process & convert any PDFs into image files
+    let processedFiles = validFiles;
+    const hasPdf = validFiles.some(f => f.type === 'application/pdf' || (f.name && f.name.toLowerCase().endsWith('.pdf')));
+    if (hasPdf) {
+      try {
+        processedFiles = await processIncomingUploadFiles(validFiles);
+      } catch (err) {
+        console.error("PDF conversion error:", err);
+      }
+    }
+
+    if (attachments.length + processedFiles.length > 15) {
+      alert(`Maximum attachments limit is 15. You tried to add ${processedFiles.length} item(s), but you already have ${attachments.length} attached.`);
       e.target.value = '';
       return;
     }
 
     setPendingUploadDate(defaultDate);
     setEditAttachment(null);
-    setUploadQueue(imageFiles);
+    setUploadQueue(processedFiles);
     setIsScannerOpen(true);
     e.target.value = '';
   };
